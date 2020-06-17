@@ -1,6 +1,8 @@
 ## Sequencing Run Log
 library(lubridate)
-
+library(dplyr)
+library(tidyverse)
+library(janitor)
 
 # extract the spreadsheet notebook (first sheet; sheet = 1, "sequencing")
 sequencing_run_log_IGM <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/8pqkjfib37fric8/sequencing%20run%20log%20at%20IGM%20post%2004-2017.xlsx?dl=0", sheet = 1) 
