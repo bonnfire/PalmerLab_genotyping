@@ -52,24 +52,17 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
             by = c("project_name" = "riptide_number_library_name"))
   
   ### pick up after this
-  subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
-  mutate_at(vars(matches("project")), ~ gsub("^ ","", .)) %>% 
-  mutate(project_details = gsub("[()]", "", project_details)) %>%
-  mutate_at(vars(matches("project")), ~ gsub(" $", "", .)) %>% 
-  mutate_at(vars(matches("project")), ~ gsub("  ", " ", .)) %>%  #remove extra spaces and spaces at the end of string
-  rowwise() %>% 
-  mutate(project = replace(project, grepl("Wis\\d+", project_details, ignore.case = T), "Wisconsin"),
-         project_details = replace(project_details, grepl("Wis\\d+", project_details, ignore.case = T), gsub("Wis", "", project_details, ignore.case = T)),
-         project = replace(project, grepl("UMich\\d+", project_details, ignore.case = T), "UMich"),
-         project_details = replace(project_details, grepl("UMich\\d+", project_details, ignore.case = T), gsub("UMich", "", project_details, ignore.case = T)),
-         project_details = replace(project_details, project_details == project, NA), #remove the details if detail is equal to the project 
-         project = replace(project, grepl("lib prep", project), paste0(project, " and seq")),
-         project_details = replace(project_details, grepl("lib prep", project_details), paste0(project_details, " and seq"))) %>% 
-  subset(project != "seq") # remove the rows that only have seq as project because that should be joined with lib prep
-sequencing_run_log_IGM_df$project %>% unique
+#   subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
+#   mutate(project = replace(project, grepl("Wis\\d+", project_details, ignore.case = T), "Wisconsin"),
+#          project_details = replace(project_details, grepl("Wis\\d+", project_details, ignore.case = T), gsub("Wis", "", project_details, ignore.case = T)),
+#          project = replace(project, grepl("UMich\\d+", project_details, ignore.case = T), "UMich"),
+#          project_details = replace(project_details, grepl("UMich\\d+", project_details, ignore.case = T), gsub("UMich", "", project_details, ignore.case = T)),
+#          project_details = replace(project_details, project_details == project, NA), #remove the details if detail is equal to the project 
+#          project = replace(project, grepl("lib prep", project), paste0(project, " and seq")),
+#          project_details = replace(project_details, grepl("lib prep", project_details), paste0(project_details, " and seq"))) %>% 
+#   subset(project != "seq") # remove the rows that only have seq as project because that should be joined with lib prep
+# sequencing_run_log_IGM_df$project %>% unique
 
-sequencing_run_log_IGM_df %>% 
-  mutate(project_details = expand.project.dash(project_details))
 
 
 # save object temporarily for apurva's review 06/09/2020
