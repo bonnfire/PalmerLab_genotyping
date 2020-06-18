@@ -75,13 +75,20 @@ library_riptide_df <- library_riptide %>%
 ## full run id and project_name primary key 
 
 
-######################## 
-## FLOW CELL TABLE 
-######################## 
+################################# 
+## SAMPLE BARCODE LIBRARY TABLE 
+################################# 
 
-# get rid of the Riptide filter to see the UMich da ta
+# get rid of the Riptide filter to see the UMich data
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
 flowcell_files <- list.files(path = ".", pattern = "^\\d{4}-\\d{2}-\\d{2}-Flowcell Sample-Barcode list.*[^)].xlsx")
+
+u01.importxlsx <- function(xlname){
+  path_sheetnames <- readxl::excel_sheets(xlname)
+  df <- lapply(readxl::excel_sheets(path = xlname), readxl::read_excel, path = xlname)
+  names(df) <- path_sheetnames
+  return(df)
+} 
 
 flowcell <- lapply(flowcell_files, function(x){
   x <- u01.importxlsx(x)[[1]] %>% 
@@ -101,8 +108,6 @@ flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 ## group by library
 
 
-
-  
 
 
 
@@ -132,6 +137,16 @@ dbWriteTable(con, c("public","extractions_ucsd"), value = extractions_khai_df, r
 
 
 
+## rewrite this using rdrop2 
+install.packages("httpuv")
+install.packages('rdrop2')
+library(rdrop2)
+token <- drop_auth()
+saveRDS(token, file = "token.rds") #save the tokens for local/remote use; Then in any drop_* function, pass `dtoken = token
+
+
+drop_search(query = "Flowcell", path = "https://www.dropbox.com/work/Palmer%20Lab/Khai-Minh%20Nguyen/Sequencing%20Submission%20Files")
+
 
 
 
@@ -147,6 +162,7 @@ dbWriteTable(con, c("public","extractions_ucsd"), value = extractions_khai_df, r
 extractions_flowcell <- extractions_khai_df %>% 
   subset(`sampleid_barcode` %in% flow_cell_original_rip$`Sample ID`) # 288
 
+## create this table for rsm
 text(barplot(table(extractions_flowcell$u01), beside = T), 0, table(extractions_flowcell$u01))
 table(extractions_flowcell$u01, extractions_flowcell$userid)
 
