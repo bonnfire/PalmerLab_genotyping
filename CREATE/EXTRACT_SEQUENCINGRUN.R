@@ -24,7 +24,7 @@ expand.project.dash <- function(txt) {
   paste0(sprintf(str, expand.dash(dashed_str)), sep = "", collapse = ",")
   }
   else
-    print(txt)
+    paste0(txt)
   } 
 expand.project.dash <- Vectorize(expand.project.dash)
 
@@ -36,10 +36,13 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   mutate_at(vars(matches("date", ignore.case = T)), 
             ~ openxlsx::convertToDate(as.numeric(.))) %>% 
   mutate_at(vars(matches("number_of_pools")), as.numeric) %>% 
-  mutate(project_details = gsub(".* [(]", "", project)) %>% # keep project column unmodified
-  mutate(project_details = gsub("[()]", "", project_details)) %>%
-  mutate(project_details = expand.project.dash(project_details)) %>%  # leave unmodified
-  separate_rows(project_details,sep=c(",|and|&")) %>% 
+  mutate(project_details = gsub(".* [(]", "", project),
+         project_name = gsub(" [(].*", "", project), 
+         project_details = gsub("[()]", "", project_details)) %>%
+  mutate(project_details = expand.project.dash(project_details)) %>% # keep project column unmodified 
+  separate_rows(project_details,sep=c(",|and|&")) 
+
+%>% 
   
   ### pick up after this
   subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
