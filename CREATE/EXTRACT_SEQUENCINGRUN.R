@@ -13,7 +13,7 @@ sequencing_run_log_IGM <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/8pqkj
 expand.project.dash <- function(txt) {
   
   if(grepl("\\d[[:space:]]?-[[:space:]]?\\d", txt)){
-  str <- gsub('\\d+\\s?-\\s?\\d+', '%d', txt)
+  str <- gsub('\\d+\\s?-\\s?\\d+', '%s', txt)
   dashed_str <- gsub('[a-zA-Z ]+', '', txt)
   
   expand.dash <- function(dashed) {
@@ -21,7 +21,7 @@ expand.project.dash <- function(txt) {
     seq(limits[1], limits[2])
   } 
   
-  paste0(sprintf(str, expand.dash(dashed_str)), sep = "", collapse = ",")
+  paste0(sprintf(str, str_pad(expand.dash(dashed_str), 2, side = "left", pad = "0")), sep = "", collapse = ",")
   }
   else
     paste0(txt)
@@ -43,10 +43,13 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   separate_rows(project_details, sep=c(",|and|&")) %>% 
   separate_rows(project_name, sep = ",") %>% 
   mutate(project_name = expand.project.dash(project_name)) %>% 
-  separate_rows(project_name, sep = ",") 
-  
-
-%>% 
+  separate_rows(project_name, sep = ",") %>% 
+  mutate_at(vars(matches("project_")), str_trim) %>% # remove leading and trailing whitespace from string
+  mutate_at(vars(matches("project_")), str_squish) %>% # remove repeated whitespace inside string
+  left_join(., library_riptide %>% 
+              select(riptide_number_library_name, plate_name) %>% 
+              mutate(riptide_number_library_name = gsub("[[:space:]]", "", riptide_number_library_name)), 
+            by = c("project_name" = "riptide_number_library_name"))
   
   ### pick up after this
   subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
