@@ -36,11 +36,15 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   mutate_at(vars(matches("date", ignore.case = T)), 
             ~ openxlsx::convertToDate(as.numeric(.))) %>% 
   mutate_at(vars(matches("number_of_pools")), as.numeric) %>% 
-  mutate(project_details = gsub(".* [(]", "", project),
+  mutate(project_details = ifelse(grepl(" [(]", project), gsub(".* [(]", "", project), NA),
          project_name = gsub(" [(].*", "", project), 
          project_details = gsub("[()]", "", project_details)) %>%
   mutate(project_details = expand.project.dash(project_details)) %>% # keep project column unmodified 
-  separate_rows(project_details,sep=c(",|and|&")) 
+  separate_rows(project_details, sep=c(",|and|&")) %>% 
+  separate_rows(project_name, sep = ",") %>% 
+  mutate(project_name = expand.project.dash(project_name)) %>% 
+  separate_rows(project_name, sep = ",") 
+  
 
 %>% 
   
