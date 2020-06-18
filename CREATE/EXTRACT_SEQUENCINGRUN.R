@@ -7,6 +7,28 @@ library(janitor)
 # extract the spreadsheet notebook (first sheet; sheet = 1, "sequencing")
 sequencing_run_log_IGM <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/8pqkjfib37fric8/sequencing%20run%20log%20at%20IGM%20post%2004-2017.xlsx?dl=0", sheet = 1) 
 
+
+## functions for wrangling
+## create new rows to expand on the projects 
+expand.project.dash <- function(txt) {
+  
+  if(grepl("\\d[[:space:]]?-[[:space:]]?\\d", txt)){
+  str <- gsub('\\d+\\s?-\\s?\\d+', '%d', txt)
+  dashed_str <- gsub('[a-zA-Z ]+', '', txt)
+  
+  expand.dash <- function(dashed) {
+    limits <- as.numeric(unlist(strsplit(dashed, '-')))
+    seq(limits[1], limits[2])
+  } 
+  
+  paste0(sprintf(str, expand.dash(dashed_str)), sep = "", collapse = ",")
+  }
+  else
+    print(txt)
+  } 
+expand.project.dash <- Vectorize(expand.project.dash)
+
+
 # modify our copy 
 sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   clean_names %>% 
@@ -14,9 +36,12 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   mutate_at(vars(matches("date", ignore.case = T)), 
             ~ openxlsx::convertToDate(as.numeric(.))) %>% 
   mutate_at(vars(matches("number_of_pools")), as.numeric) %>% 
-  separate_rows(project,sep=c(",|and|&")) %>% 
-  mutate(project_details = gsub(".* [(]", "", project), 
-         project = gsub("[(].*", "", project)) %>% 
+  mutate(project_details = gsub(".* [(]", "", project)) %>% # keep project column unmodified
+  mutate(project_details = gsub("[()]", "", project_details)) %>%
+  mutate(project_details = expand.project.dash(project_details)) %>%  # leave unmodified
+  separate_rows(project_details,sep=c(",|and|&")) %>% 
+  
+  ### pick up after this
   subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
   mutate_at(vars(matches("project")), ~ gsub("^ ","", .)) %>% 
   mutate(project_details = gsub("[()]", "", project_details)) %>%
@@ -32,6 +57,10 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
          project_details = replace(project_details, grepl("lib prep", project_details), paste0(project_details, " and seq"))) %>% 
   subset(project != "seq") # remove the rows that only have seq as project because that should be joined with lib prep
 sequencing_run_log_IGM_df$project %>% unique
+
+sequencing_run_log_IGM_df %>% 
+  mutate(project_details = expand.project.dash(project_details))
+
 
 # save object temporarily for apurva's review 06/09/2020
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
