@@ -14,6 +14,8 @@ require(ggplot2)
 require(tidyxl)
 
 require(lubridate)
+library(tidyverse)
+library(janitor)
 library(openxlsx)
 library(stringr)
 library(stringi)

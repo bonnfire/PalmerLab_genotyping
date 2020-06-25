@@ -37,37 +37,23 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
             ~ openxlsx::convertToDate(as.numeric(.))) %>% 
   mutate_at(vars(matches("number_of_pools")), as.numeric) %>% 
   mutate(project_details = ifelse(grepl(" [(]", project), gsub(".* [(]", "", project), NA),
-         project_name = gsub(" [(].*", "", project), 
+         library_name = gsub(" [(].*", "", project), 
          project_details = gsub("[()]", "", project_details)) %>%
   mutate(project_details = expand.project.dash(project_details)) %>% # keep project column unmodified 
   separate_rows(project_details, sep=c(",|and|&")) %>% 
-  separate_rows(project_name, sep = ",") %>% 
-  mutate(project_name = expand.project.dash(project_name)) %>% 
-  separate_rows(project_name, sep = ",") %>% 
+  separate_rows(library_name, sep = ",") %>% 
+  mutate(library_name = expand.project.dash(library_name)) %>% 
+  separate_rows(library_name, sep = ",") %>% 
   mutate_at(vars(matches("project_")), str_trim) %>% # remove leading and trailing whitespace from string
   mutate_at(vars(matches("project_")), str_squish) %>% # remove repeated whitespace inside string
   left_join(., library_riptide %>% 
               select(riptide_number_library_name, plate_name) %>% 
               mutate(riptide_number_library_name = gsub("[[:space:]]", "", riptide_number_library_name)), 
-            by = c("project_name" = "riptide_number_library_name"))
+            by = c("library_name" = "riptide_number_library_name"))
   
-  ### pick up after this
-#   subset(select = c(date_samples_submitted:project, project_details, for_palmer_lab_member:igm_billed_yet)) %>%  #changing the order of the df
-#   mutate(project = replace(project, grepl("Wis\\d+", project_details, ignore.case = T), "Wisconsin"),
-#          project_details = replace(project_details, grepl("Wis\\d+", project_details, ignore.case = T), gsub("Wis", "", project_details, ignore.case = T)),
-#          project = replace(project, grepl("UMich\\d+", project_details, ignore.case = T), "UMich"),
-#          project_details = replace(project_details, grepl("UMich\\d+", project_details, ignore.case = T), gsub("UMich", "", project_details, ignore.case = T)),
-#          project_details = replace(project_details, project_details == project, NA), #remove the details if detail is equal to the project 
-#          project = replace(project, grepl("lib prep", project), paste0(project, " and seq")),
-#          project_details = replace(project_details, grepl("lib prep", project_details), paste0(project_details, " and seq"))) %>% 
-#   subset(project != "seq") # remove the rows that only have seq as project because that should be joined with lib prep
-# sequencing_run_log_IGM_df$project %>% unique
-
-
-
 # save object temporarily for apurva's review 06/09/2020
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
-sequencing_run_log_IGM_df %>% write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")
+sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")
 
 ## upload into the dropbox 
 
