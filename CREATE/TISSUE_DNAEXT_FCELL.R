@@ -35,9 +35,9 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
     ifelse(
       grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10,
       paste0("93300", sample_id_barcode),
-      ifelse(!grepl("^\\d+", sample_id_barcode) & str_count(transponder) == 10
-      sample_id_barcode)
-      ) 
+      ifelse(!grepl("^\\d+", sample_id_barcode) & str_count(transponder) == 10,
+             sample_id_barcode, sample_id_barcode)
+    ) 
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
   # mutate(
   #   u01_rfid_verified = case_when(
@@ -107,6 +107,37 @@ flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 ## get_dupes()
 ## group by library
 
+### XX pick up from here but 6/25 for abe 
+flowcell_df %>%  
+  mutate(rfid = ifelse(
+  grepl("^\\d+", sample_id) & nchar(sample_id) == 9,
+  paste0("933000", sample_id),
+  ifelse(
+    grepl("^\\d+", sample_id) & nchar(sample_id) == 10,
+    paste0("93300", sample_id),
+    ifelse(!grepl("^\\d+", sample_id) & str_count(sample_id) == 10,
+           sample_id, sample_id)
+  ) 
+)) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  # mutate(
+  #   u01_rfid_verified = case_when(
+  #     rfid %in%  WFU_OlivierCocaine_test_df$rfid ~ "yes",
+  #     # rfid == "933000120117313" ~ "u01_olivier_cocaine",
+  #     rfid %in%  WFU_OlivierOxycodone_test_df$rfid ~ "yes",
+  #     rfid %in%  WFU_Jhou_test_df$rfid ~ "yes",
+  #     rfid %in%  WFU_Mitchell_test_df$rfid ~ "yes",
+  #     rfid %in%  WFU_Kalivas_test_df$rfid ~ "yes",
+  #     rfid %in%  WFU_KalivasItaly_test_df$rfid ~ "yes",
+  #     
+  #     TRUE ~ "NA"
+#   )
+# ) %>%
+left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) %>%
+  mutate(u01 = paste0(u01, "_", cohort)) %>%
+  select(-one_of("cohort")) %>% 
+  subset(grepl("Kalivas", u01)) %>% 
+  distinct(rfid) %>% 
+  dim()
 
 
 
