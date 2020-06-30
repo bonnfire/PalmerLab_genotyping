@@ -44,13 +44,20 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   separate_rows(library_name, sep = ",") %>% 
   mutate(library_name = expand.project.dash(library_name)) %>% 
   separate_rows(library_name, sep = ",") %>% 
-  mutate_at(vars(matches("project_")), str_trim) %>% # remove leading and trailing whitespace from string
-  mutate_at(vars(matches("project_")), str_squish) %>% # remove repeated whitespace inside string
+  mutate_at(vars(matches("library_")), str_trim) %>% # remove leading and trailing whitespace from string
+  mutate_at(vars(matches("library_")), str_squish) %>% # remove repeated whitespace inside string
   left_join(., library_riptide %>% 
               select(riptide_number_library_name, plate_name) %>% 
               mutate(riptide_number_library_name = gsub("[[:space:]]", "", riptide_number_library_name)), 
-            by = c("library_name" = "riptide_number_library_name"))
-  
+            by = c("library_name" = "riptide_number_library_name")) %>% 
+  mutate(
+  project_name = case_when(
+    grepl("Olivier") ~ "",
+    
+    TRUE ~ "NA"
+  )
+) # include the schema names
+
 # save object temporarily for apurva's review 06/09/2020
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
 sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")

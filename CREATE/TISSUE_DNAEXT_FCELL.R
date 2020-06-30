@@ -4,6 +4,12 @@
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
 
 
+
+### 6/30/2020 
+## XX do we have a shipment received table? 
+## we do, it extracts from 20190829_wfu_u01_shippingmaster/TissueShipments and the script is saved in WFU github
+### 
+
 ######################## 
 ## KHAI EXTRACTION TABLE 
 ######################## 
@@ -69,7 +75,7 @@ library_riptide <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/hq4g4fw4irub
 
 library_riptide_df <- library_riptide %>% 
   ## pick up from here
-  ## make this format the same as others in library prep
+  ## make this format the same   as others in library prep
 
   
 ## full run id and project_name primary key 
@@ -133,11 +139,11 @@ flowcell_df %>%
 #   )
 # ) %>%
 left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) %>%
-  mutate(u01 = paste0(u01, "_", cohort)) %>%
-  select(-one_of("cohort")) %>% 
-  subset(grepl("Kalivas", u01)) %>% 
-  distinct(rfid) %>% 
-  dim()
+  # mutate(u01 = paste0(u01, "_", cohort)) %>%
+  # select(-one_of("cohort")) %>% 
+  # subset(grepl("Kalivas", u01)) %>% 
+  # distinct(rfid) %>% 
+  # dim()
 
 
 
