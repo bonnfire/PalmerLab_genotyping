@@ -58,10 +58,11 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
   #     TRUE ~ "NA"
   #   )
   # ) %>%
-  left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) %>%
-  mutate(u01 = paste0(u01, "_", cohort)) %>%
-  select(-one_of("cohort"))
-
+  left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) 
+# %>%
+#   mutate(u01 = paste0(u01, "_", cohort)) %>%
+#   select(-one_of("cohort"))
+# 
 
 
 ################################ 
@@ -79,144 +80,6 @@ library_riptide_df <- library_riptide %>%
 
   
 ## full run id and project_name primary key 
-
-
-################################# 
-## SAMPLE BARCODE LIBRARY TABLE 
-################################# 
-
-# get rid of the Riptide filter to see the UMich data
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
-flowcell_files <- list.files(path = ".", pattern = "^\\d{4}-\\d{2}-\\d{2}-Flowcell Sample-Barcode list.*[^)].xlsx")
-
-u01.importxlsx <- function(xlname){
-  path_sheetnames <- readxl::excel_sheets(xlname)
-  df <- lapply(readxl::excel_sheets(path = xlname), readxl::read_excel, path = xlname)
-  names(df) <- path_sheetnames
-  return(df)
-} 
-
-flowcell <- lapply(flowcell_files, function(x){
-  x <- u01.importxlsx(x)[[1]] %>% 
-    clean_names() 
-  return(x)
-})
-names(flowcell) <- flowcell_files 
-flowcell_df <- flowcell %>% rbindlist(idcol = "flowcell_file", fill = T, use.names = T) %>% 
-  mutate(comment = coalesce(comments_8, comments_9)) %>% 
-  select(-c("x7", "comments_8", "comments_9", "flow_cell_lane")) %>%  # columns that only contain NA or have been coalesced
-  dplyr::filter(grepl("Riptide", library)) %>% 
-  mutate(comment = toupper(comment))
-flowcell_df %>% mutate_at(vars(one_of("library")), as.factor) %>% summary()
-flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
-
-## get_dupes()
-## group by library
-
-### XX pick up from here but 6/25 for abe 
-flowcell_df %>%  
-  mutate(rfid = ifelse(
-  grepl("^\\d+", sample_id) & nchar(sample_id) == 9,
-  paste0("933000", sample_id),
-  ifelse(
-    grepl("^\\d+", sample_id) & nchar(sample_id) == 10,
-    paste0("93300", sample_id),
-    ifelse(!grepl("^\\d+", sample_id) & str_count(sample_id) == 10,
-           sample_id, sample_id)
-  ) 
-)) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
-  # mutate(
-  #   u01_rfid_verified = case_when(
-  #     rfid %in%  WFU_OlivierCocaine_test_df$rfid ~ "yes",
-  #     # rfid == "933000120117313" ~ "u01_olivier_cocaine",
-  #     rfid %in%  WFU_OlivierOxycodone_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Jhou_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Mitchell_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Kalivas_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_KalivasItaly_test_df$rfid ~ "yes",
-  #     
-  #     TRUE ~ "NA"
-#   )
-# ) %>%
-left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) %>%
-  # mutate(u01 = paste0(u01, "_", cohort)) %>%
-  # select(-one_of("cohort")) %>% 
-  # subset(grepl("Kalivas", u01)) %>% 
-  # distinct(rfid) %>% 
-  # dim()
-
-
-
-
-## create the sample sheet for Riyan
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
-
-flow_cell_original_riyan <- u01.importxlsx("2020-01-16-Flowcell Sample-Barcode list-Riptide-UMich2-Riptide03_NovaSeq01 (copy for Riyan).xlsx") # 1 table
-dataframe = list()
-for(i in 1:10){
-  dataframe[[i]] <- flow_cell_original_riyan$Sheet1 %>% group_by(Barcode) %>% slice(i)
-}
-write.xlsx(dataframe, file='Flowcell_Sample_Sheet.xlsx')
-
-
-
-
-
-con <- dbConnect(dbDriver("PostgreSQL"), dbname="U01",user="postgres",password="postgres", )
-dbWriteTable(con, c("public","extractions_ucsd"), value = extractions_khai_df, row.names = FALSE)
-
-# gsub("\\\\", "", paste0(colnames(extractions_khai_df), collapse='","')) %>% cat to get an c+p version of the colnames 
-
-
-
-
-
-
-
-
-## rewrite this using rdrop2 
-install.packages("httpuv")
-install.packages('rdrop2')
-library(rdrop2)
-token <- drop_auth()
-saveRDS(token, file = "token.rds") #save the tokens for local/remote use; Then in any drop_* function, pass `dtoken = token
-
-
-drop_search(query = "Flowcell", path = "https://www.dropbox.com/work/Palmer%20Lab/Khai-Minh%20Nguyen/Sequencing%20Submission%20Files")
-
-
-
-
-
-
-
-#### SENT TO SEQUENCING CORE
-## 06/09/2020
-## XX fix project names before uploading the sheets in the database
-
-
-
-extractions_flowcell <- extractions_khai_df %>% 
-  subset(`sampleid_barcode` %in% flow_cell_original_rip$`Sample ID`) # 288
-
-## create this table for rsm
-text(barplot(table(extractions_flowcell$u01), beside = T), 0, table(extractions_flowcell$u01))
-table(extractions_flowcell$u01, extractions_flowcell$userid)
-
-# using origin will get you the wrong cohorts?
-
-extractions_flowcell$u01 %>% table() 
-extractions_flowcell$u01_rfid_verified %>% table() 
-
-# extractions_flowcell$origin %>% table()
-
-olivier_spleen_list_df %>% subset(rfid %in% extractions_flowcell[which(extractions_flowcell$comments == "mismatch"),]$transponder)
-extractions_flowcell[which(extractions_flowcell$comments == "mismatch"),]
-extractions_flowcell %>% subset(comments == "mismatch")
-# searching for duplicate entries in the sampleid barcode column FALSE FOR BOTH extractions_flowcell %>% select(transponder AND sampleid_barcode) %>% duplicated() %>% any() 
-agrep("933000120117342", extractions_flowcell$transponder, value = T)
-"933000120138331"
-"933000120138561"
 
 
 

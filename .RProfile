@@ -15,6 +15,7 @@ require(tidyxl)
 
 require(lubridate)
 library(tidyverse)
+library(data.table)
 library(janitor)
 library(openxlsx)
 library(stringr)

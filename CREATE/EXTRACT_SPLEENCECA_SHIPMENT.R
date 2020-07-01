@@ -280,6 +280,8 @@ mitchell_shipments_spleen_df <- mitchell_shipments_spleen %>% rbindlist(fill = T
 mitchell_shipments_spleen_df %>% subset(!is.na(barcode_number)) %>% subset(rfid != paste0("933000", barcode_number)) # since barcode_number is empty for shipment1 doc
 
 
+
+## XX 6/30/2020 fix the shipment3 spleen ceca original object, doesn't exist
 mitchell_ceca_shipments <- mitchell_shipment3_spleenceca_original_excel$`Ceca Shipping Sheet`
 mitchell_ceca_shipments <- mitchell_ceca_shipments %>% 
   rename("rfid" = "RFID", 
@@ -298,8 +300,17 @@ mitchell_spleenceca_toprocess <- plyr::rbind.fill(mitchell_spleen_shipments, mit
 ###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
 kalivas_spleenceca_original_excel <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort information.xlsx")[-1] 
+kalivas_spleenceca_original_excel_updated <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort updated 20200214.xlsx")[-1] 
 
 kalivas_spleenceca_original_df <- kalivas_spleenceca_original_excel %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
+  clean_names() %>% 
+  rename("rfid" = "microchip") %>% 
+  subset(grepl("Cohort", cohort)) %>% 
+  mutate(cohort = str_pad(str_extract(cohort, "\\d+"), 2, "left", "0"), sex = str_extract(toupper(sex), "\\D{1}")) %>% 
+  subset(grepl("^\\d+", rfid)) %>% 
+  select(-sex) 
+
+kalivas_spleenceca_original_excel_updated %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
   clean_names() %>% 
   rename("rfid" = "microchip") %>% 
   subset(grepl("Cohort", cohort)) %>% 
