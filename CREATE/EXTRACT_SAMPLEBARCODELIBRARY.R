@@ -61,8 +61,22 @@ flowcell_df_fordb <- flowcell_df %>%
 
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
 dbWriteTable(con, c("sample_tracking","sample_barcode_library"), value = flowcell_df_fordb, row.names = FALSE)
+
+dbExecute(con,"ALTER TABLE sample_tracking.sample_barcode_library RENAME COLUMN \"sample_id_demul\" TO \"rfid\"")
+dbExecute(con,"ALTER TABLE sample_tracking.sample_barcode_library ADD PRIMARY KEY(rfid,project_name)")
   
-  
+dbExecute(con, "sp_columns sample_tracking.sample_barcode_library")
+dbExecute(con, "SELECT COLUMN_NAME FROM sample_tracking.sample_barcode_library")
+
+
+## use dbSendQuery and dbFetch to see results
+# example
+# see column names
+# dbSendQuery(con, "SELECT column_name FROM information_schema.columns where table_schema = 'sample_tracking' and table_name = 'sample_barcode_library'") %>% dbFetch
+
+# use this to fix close resultSet before continuing error msg 
+## dbClearResult(dbListResults(con)[[1]]) 
+
 ## create the sample sheet for Riyan
 # setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
 # 

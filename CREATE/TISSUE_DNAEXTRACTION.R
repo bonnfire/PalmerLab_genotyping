@@ -34,7 +34,7 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
   rbindlist(fill = T) %>% # does not need idcol since dna plate code is this  
   clean_names %>% 
   mutate_if(is.factor, as.character) %>% 
-  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder)) %>%
+  # dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder)) %>% # if you exclude, you are removing pcal and zebrafish
   mutate(rfid = ifelse(
     grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
     paste0("933000", sample_id_barcode),
@@ -45,25 +45,27 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
              sample_id_barcode, sample_id_barcode)
     ) 
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
-  # mutate(
-  #   u01_rfid_verified = case_when(
-  #     rfid %in%  WFU_OlivierCocaine_test_df$rfid ~ "yes",
-  #     # rfid == "933000120117313" ~ "u01_olivier_cocaine",
-  #     rfid %in%  WFU_OlivierOxycodone_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Jhou_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Mitchell_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_Kalivas_test_df$rfid ~ "yes",
-  #     rfid %in%  WFU_KalivasItaly_test_df$rfid ~ "yes",
-  #     
-  #     TRUE ~ "NA"
-  #   )
-  # ) %>%
-  left_join(., shipments_df[, c("rfid", "cohort", "u01")], by = c("rfid")) 
-# %>%
-#   mutate(u01 = paste0(u01, "_", cohort)) %>%
-#   select(-one_of("cohort"))
-# 
+  left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
+  select(-u01) %>% 
+  left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
+  ungroup() %>% 
+  mutate(date = openxlsx::convertToDate(date))
 
+khai_spleenextraction_df %>% 
+
+khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>% 
+  mutate(
+    project_name = case_when(
+      grepl("p\\.cal", sample_id_barcode) ~ "pcal_brian_trainor",
+      grepl("Plate", sample_id_demul) ~ "r01_su_guo",
+      grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+      grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+      grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+      grepl("Jhou", u01) ~ "u01_tom_jhou",
+      TRUE ~ "NA"
+    ))  # for the animals for which we don't have shipment info for 
 
 ################################ 
 ## LIBRARY RIPTIDE NAME LIST 
@@ -73,13 +75,15 @@ library_riptide <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/hq4g4fw4irub
   clean_names() %>% 
   mutate_all(as.character) %>% 
   mutate_at(vars(matches("date")), as.POSIXct) 
-
-library_riptide_df <- library_riptide %>% 
-  ## pick up from here
-  ## make this format the same   as others in library prep
-
   
 ## full run id and project_name primary key 
+
+
+
+
+
+
+
 
 
 
