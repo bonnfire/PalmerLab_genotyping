@@ -88,6 +88,24 @@ khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
 
 
 
+khai_spleenextraction_df_fordb
+
+con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
+dbWriteTable(con, c("sample_tracking","extraction_log"), value = khai_spleenextraction_df_fordb, row.names = FALSE)
+dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD PRIMARY KEY(rfid,project_name)")
+
+
+## in terminal
+cd /tmp
+sudo su postgres
+pg_dump -d PalmerLab_Datasets -t sample_tracking.extraction_log > extraction_log.sql
+exit
+cp extraction_log.sql /home/bonnie/Dropbox\ \(Palmer\ Lab\)/PalmerLab_Datasets/sample_tracking
+
+
+
+
+
 ################################ 
 ## LIBRARY RIPTIDE NAME LIST 
 ################################
