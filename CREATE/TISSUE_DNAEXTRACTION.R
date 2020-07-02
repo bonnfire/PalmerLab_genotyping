@@ -34,6 +34,9 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
   rbindlist(fill = T) %>% # does not need idcol since dna plate code is this  
   clean_names %>% 
   mutate_if(is.factor, as.character) %>% 
+  rowwise() %>% 
+  mutate(sample_id_barcode = replace(sample_id_barcode, grepl("Plate", dna_plate_code, ignore.case = T), paste0(dna_plate_code, well))) %>% 
+  ungroup() %>% 
   # dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder)) %>% # if you exclude, you are removing pcal and zebrafish
   mutate(rfid = ifelse(
     grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
@@ -45,6 +48,9 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
              sample_id_barcode, sample_id_barcode)
     ) 
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
+  ungroup() %>% 
   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
