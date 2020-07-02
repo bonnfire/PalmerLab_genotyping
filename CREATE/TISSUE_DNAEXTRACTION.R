@@ -37,17 +37,19 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
   rowwise() %>% 
   mutate(sample_id_barcode = replace(sample_id_barcode, grepl("Plate", dna_plate_code, ignore.case = T), paste0(dna_plate_code, well))) %>% 
   ungroup() %>% 
-  # dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder)) %>% # if you exclude, you are removing pcal and zebrafish
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
   mutate(rfid = ifelse(
     grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
     paste0("933000", sample_id_barcode),
     ifelse(
       grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10,
       paste0("93300", sample_id_barcode),
-      ifelse(!grepl("^\\d+", sample_id_barcode) & str_count(transponder) == 10,
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode),
              sample_id_barcode, sample_id_barcode)
     ) 
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
   ungroup() %>% 
@@ -56,22 +58,35 @@ khai_spleenextraction_df <- khai_spleenextraction %>%
   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
   select(-u01) %>% 
   left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
+  left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
   ungroup() %>% 
-  mutate(date = openxlsx::convertToDate(date))
+  mutate(date = openxlsx::convertToDate(date)) %>% 
+  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)"))
 
-khai_spleenextraction_df %>% 
+# ch
 
-khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>% 
+
+khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
   mutate(
     project_name = case_when(
-      grepl("p\\.cal", sample_id_barcode) ~ "pcal_brian_trainor",
-      grepl("Plate", sample_id_demul) ~ "r01_su_guo",
+      grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
+      grepl("Plate", rfid) ~ "r01_su_guo",
+      grepl("Plate", dna_plate_code) ~ "r01_su_guo",
       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
       grepl("Jhou", u01) ~ "u01_tom_jhou",
+      grepl("Kalivas", u01) ~ "u01_peter_kalivas_us",
+      grepl("Chen", p50) ~ "p50_hao_chen", 
+      grepl("Richards", p50) ~ "p50_jerry_richards", 
+      grepl("Meyer", p50) ~ "p50_paul_meyer", 
       TRUE ~ "NA"
-    ))  # for the animals for which we don't have shipment info for 
+    )
+  ) %>%   # for the animals for which we don't have shipment info for
+  naniar::replace_with_na_all(condition = ~ .x %in% c("NA", "N/A", "None")) %>% 
+  select(-one_of("u01", "p50", "v1", "v2"))
+
+
 
 ################################ 
 ## LIBRARY RIPTIDE NAME LIST 
