@@ -87,12 +87,13 @@ khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
   select(-one_of("u01", "p50", "v1", "v2"))
 
 
-
-khai_spleenextraction_df_fordb
-
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
 dbWriteTable(con, c("sample_tracking","extraction_log"), value = khai_spleenextraction_df_fordb, row.names = FALSE)
 dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD PRIMARY KEY(rfid,project_name)")
+dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD UNIQUE(dna_plate_code,rfid,well)")
+# run when combined_master_table is complete
+# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD FOREIGN KEY(rfid) REFERENCES sample_tracking.combined_master_table(rfid)")
+
 
 
 ## in terminal
