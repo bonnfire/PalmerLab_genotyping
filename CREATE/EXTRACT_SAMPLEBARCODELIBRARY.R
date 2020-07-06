@@ -31,7 +31,9 @@ flowcell_df <- flowcell %>% rbindlist(idcol = "filename", fill = T, use.names = 
   mutate(comment = coalesce(comments_8, comments_9)) %>% 
   select(-c("x7", "comments_8", "comments_9", "flow_cell_lane")) %>%  # columns that only contain NA or have been coalesced
   # dplyr::filter(grepl("Riptide", library)) %>% 
-  mutate(comment = toupper(comment))
+  mutate(comment = toupper(comment)) %>% 
+  mutate(rfid = ifelse(grepl("^\\d{9}$", sample_id),
+                       paste0("933000", sample_id), sample_id_demul))  # create a column for rfid if it doesn't already exist
 
 flowcell_df %>% mutate_at(vars(one_of("library")), as.factor) %>% summary()
 flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
@@ -39,19 +41,19 @@ flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 
 ## assign project_name 
 flowcell_df_fordb <- flowcell_df %>% 
-  left_join(., shipments_df[, c("rfid", "u01")], by = c("sample_id_demul" = "rfid")) %>%   # for the animals for which we have shipment info for 
+  left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the animals for which we have shipment info for 
   mutate(
     project_name = case_when(
+      grepl("umich", library, ignore.case = T) ~ "u01_huda_akil",
       grepl("p\\.cal", sample_id_demul) ~ "pcal_brian_trainor",
       grepl("Plate", sample_id_demul) ~ "r01_su_guo",
       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-      grepl("Jhou", u01) ~ "u01_tom_jhou",
-      TRUE ~ "NA"
-    )) %>%  # for the animals for which we don't have shipment info for 
-  select(-one_of("u01")) %>% 
-  rename("rfid" = "sample_id_demul")
+      grepl("Jhou", u01) ~ "u01_tom_jhou")
+    ) # for the animals for which we don't have shipment info for 
+  # select(-one_of("u01")) %>% 
+  # rename("rfid" = "sample_id_demul") 
   
 
 
