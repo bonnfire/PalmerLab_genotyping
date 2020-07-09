@@ -59,6 +59,9 @@ flowcell_df_fordb <- flowcell_df %>%
 
 
 
+
+
+
 ## upload the pgdump file into the db
 
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
