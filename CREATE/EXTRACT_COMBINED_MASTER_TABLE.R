@@ -10,9 +10,9 @@
 #for p50
 source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/P50/after_renewal/CREATE/CREATE_P50DATABASENAMES.R")
 #for u01
-source()
+source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/WFU_U01_MasterTables/CREATE/CREATE_WFUDATABASENAMES.R")
 #for pcal
-
+source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/pcal_brian_trainor/CREATE/CREATE_SAMPLEIDS_LIBPREP.R")
 #for zebrafish
 source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/CREATE_SAMPLEIDS_LIBPREP.R")
 #for huda
@@ -23,6 +23,7 @@ source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/u01_huda_
 
 combined <- list(p50 = shipments_p50_df[, c("p50", "rfid", "sex")],
      u01 = shipments_df[, c("u01", "rfid", "sex")], 
+     pcal = pcal_sample_info_df[ , c("plate", "rfid")],
      zebrafish = zebrafish_sample_info_df[, c("plate", "rfid")], 
      huda_df = huda_df,
      ...) 
