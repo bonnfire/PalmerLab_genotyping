@@ -5,15 +5,62 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_Shippin
 
 
 
-### 6/30/2020 
-## XX do we have a shipment received table? 
-## we do, it extracts from 20190829_wfu_u01_shippingmaster/TissueShipments and the script is saved in WFU github
-### 
+# An important subset of this table comes from the shipments that we receive from the labs
+# The shipment sheets for the tissue samples are in folder 20190829_wfu_u01_shippingmaster/TissueShipments and they are saved in the WFU_MasterTables github
 
 ######################## 
 ## KHAI EXTRACTION TABLE 
 ######################## 
 
+# modifying code to extract from multiple google sheets
+#install.packages("googlesheets4")
+khai_tissueextractionNames <- googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)] #extract the id code associated with the U01 Spleen&Fish Extraction Database 
+
+khai_tissueextraction <- lapply(khai_tissueextractionNames, function(x){             
+  googlesheets4::sheets_read(googlesheets4::gs4_find()$id[1],sheet = x) 
+}) # extract all sheets in this workbook
+
+
+# clean for df 
+khai_tissueextraction_df <- khai_tissueextraction %>% 
+  lapply(., function(x){
+    x %>%
+      mutate_all(as.character)
+  }) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  mutate_if(is.factor, as.character) %>% 
+  rowwise() %>% 
+  mutate(sample_id_barcode = replace(sample_id_barcode, grepl("Plate", dna_plate_code, ignore.case = T), paste0(dna_plate_code, well))) %>% 
+  ungroup() %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
+  mutate(rfid = ifelse(
+    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
+    paste0("933000", sample_id_barcode),
+    ifelse(
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10,
+      paste0("93300", sample_id_barcode),
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode),
+             sample_id_barcode, sample_id_barcode)
+    ) 
+  )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
+  ungroup() %>% 
+  left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
+  select(-u01) %>% 
+  left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
+  left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
+  ungroup() %>% 
+  mutate(date = openxlsx::convertToDate(date)) %>% 
+  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)"))
+
+
+# *** below code not needed anymore since 07/15/2020 because we moved to google sheets 
 ### extract khai's data 
 # devtools::install_github("Displayr/flipAPI")
 library(flipAPI)

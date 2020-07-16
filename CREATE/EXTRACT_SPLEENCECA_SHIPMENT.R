@@ -74,9 +74,10 @@ jhou_spleen_test3 %>% left_join(., WFU_Jhou_test_df[, c("cohort", "rfid")], by =
 ###########################
 ###### OLIVIER ############
 ###########################
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")olivier_spleen_raw <- read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
-olivier_spleen_cells_raw <- tidyxl::xlsx_cells(path = "Olivier Spleens Oxy and Coc 91319.xlsx/TissueShipments")
-olivier_spleen_formats_raw <- xlsx_formats(path = "Olivier Spleens Oxy and Coc 91319.xlsx")
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
+olivier_spleen_raw <- read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
+# olivier_spleen_cells_raw <- tidyxl::xlsx_cells(path = "Olivier Spleens Oxy and Coc 91319.xlsx/TissueShipments")
+# olivier_spleen_formats_raw <- xlsx_formats(path = "Olivier Spleens Oxy and Coc 91319.xlsx")
 
 # parse through indices using colors, couldn't work because of two observations 
 
@@ -122,7 +123,23 @@ olivier_spleen_list_df <- lapply(olivier_spleen_list, function(df) {
     mutate(sex = substring(labanimalid, 1, 1))
   return(df)
 }) %>% rbindlist() %>%
-  subset(!is.na(rfid))
+  subset(!is.na(rfid)) %>% 
+  mutate(cohort = paste0("C", parse_number(cohort) %>% str_pad(2, "left", "0")),
+         experiment = replace(experiment, experiment == "Oxycodone", "Oxy"))
+
+
+## add more spleens from second shipment
+olivier_spleen_raw_2 <- u01.importxlsx("Spleens for Abe Oxy and Coc 20200110.xlsx")[[2]] %>% 
+  clean_names %>% 
+  rename("labanimalid" = "internal_id",
+         "row_num_location_in_box" = "position_in_box") %>% 
+  separate(box, c("experiment", "cohort"), sep = " ") %>% 
+  mutate(sex = substring(labanimalid, 1, 1),
+         cohort = paste0("C", parse_number(cohort) %>% str_pad(2, "left", "0")))
+
+## join all shipment sheets
+olivier_spleens_df <- plyr::rbind.fill(olivier_spleen_list_df, olivier_spleen_raw_2)
+
 
 # QC: 
 # number of counts as the raw files: all numbers match cohorts 1:8 for cocaine, no cohort 6, and only 3 and 4 for oxy
@@ -282,17 +299,26 @@ mitchell_shipments_spleen_df %>% subset(!is.na(barcode_number)) %>% subset(rfid 
 
 
 ## XX 6/30/2020 fix the shipment3 spleen ceca original object, doesn't exist
-mitchell_ceca_shipments <- mitchell_shipment3_spleenceca_original_excel$`Ceca Shipping Sheet`
-mitchell_ceca_shipments <- mitchell_ceca_shipments %>% 
-  rename("rfid" = "RFID", 
-         "samplenum" = "Sample #",
-         "barcodenum" = "Barcode #",
-         "box" = "Box", 
-         "shipmentbox" = "Shipping Container", 
-         "tissue" = "Tissue Collected",
-         "notes"= "Dissection Comments")
 
-mitchell_spleenceca_toprocess <- plyr::rbind.fill(mitchell_spleen_shipments, mitchell_ceca_shipments)
+mitchell_extractceca <- function(x){
+  spleen_shipments <- u01.importxlsx(x)$`Ceca Shipping Sheet` %>% 
+    clean_names() %>% 
+    rename_at(vars(matches("^id$")), function(x) "rfid") %>%
+    rename_at(vars(matches("^shipping_box_2_container_2$|^box$")), function(x) "shipping_box") %>%
+    rename_at(vars(matches("tissue_collected")), function(x) "tissue") %>%
+    rename_at(vars(matches("microchip_id")), function(x) "microchip") %>%
+    mutate(shipping_box = gsub("[^[:digit:].]", "", shipping_box))
+  return(spleen_shipments)
+}
+mitchell_shipments_ceca <- lapply(mitchell_shipments_files, mitchell_extractceca) 
+names(mitchell_shipments_ceca) <- mitchell_shipments_files
+mitchell_shipments_ceca_df <- mitchell_shipments_ceca %>% rbindlist(fill = T, idcol = "sheet") %>% 
+  dplyr::filter(grepl("^\\d+$", rfid))
+
+
+
+
+# mitchell_spleenceca_toprocess <- plyr::rbind.fill(mitchell_spleen_shipments, mitchell_ceca_shipments)
 
 
 ###########################
