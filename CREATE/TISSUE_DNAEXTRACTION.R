@@ -29,10 +29,6 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
   }) %>% 
   rbindlist(fill = T) %>% 
   clean_names %>% 
-  mutate_if(is.factor, as.character) %>% 
-  rowwise() %>% 
-  mutate(sample_id_barcode = replace(sample_id_barcode, grepl("Plate", dna_plate_code, ignore.case = T), paste0(dna_plate_code, well))) %>% 
-  ungroup() %>% 
   naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
   dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
   mutate(rfid = ifelse(
@@ -49,7 +45,11 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
   ungroup() %>% 
+  left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
+  mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
+         u01 = replace(u01, grepl("Coc", experiment)&!grepl("Co", u01), "Olivier_Oxy"),
+         u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
   select(-u01) %>% 

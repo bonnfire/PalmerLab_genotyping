@@ -75,7 +75,7 @@ jhou_spleen_test3 %>% left_join(., WFU_Jhou_test_df[, c("cohort", "rfid")], by =
 ###### OLIVIER ############
 ###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
-olivier_spleen_raw <- read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
+olivier_spleen_raw <- readxl::read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
 # olivier_spleen_cells_raw <- tidyxl::xlsx_cells(path = "Olivier Spleens Oxy and Coc 91319.xlsx/TissueShipments")
 # olivier_spleen_formats_raw <- xlsx_formats(path = "Olivier Spleens Oxy and Coc 91319.xlsx")
 
@@ -139,6 +139,11 @@ olivier_spleen_raw_2 <- u01.importxlsx("Spleens for Abe Oxy and Coc 20200110.xls
 
 ## join all shipment sheets
 olivier_spleens_df <- plyr::rbind.fill(olivier_spleen_list_df, olivier_spleen_raw_2)
+
+
+
+
+
 
 
 # QC: 
