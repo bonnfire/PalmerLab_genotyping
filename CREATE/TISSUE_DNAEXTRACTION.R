@@ -60,86 +60,34 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
   mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)"))
 
 
-# *** below code not needed anymore since 07/15/2020 because we moved to google sheets 
-### extract khai's data 
-# devtools::install_github("Displayr/flipAPI")
-library(flipAPI)
 
-i <- 1
-khai_spleenextraction <- list()
-while (TRUE){
-  khai_spleenextraction[[i]] <- try(DownloadXLSX("https://www.dropbox.com/s/ps8hxgleh1lvo55/U01%20spleen%20extraction%20database.xlsx?dl=0", sheet = i))
-  if (inherits(khai_spleenextraction[[i]], "try-error"))
-    break
-  i <- i + 1
-}
-
-khai_spleenextraction <- khai_spleenextraction %>% 
-  discard( ~ is.null(nrow(.x)) == T) # discard items from list if nrow is null
-
-khai_spleenextraction_df <- khai_spleenextraction %>%
-  rbindlist(fill = T) %>% # does not need idcol since dna plate code is this  
-  clean_names %>% 
-  mutate_if(is.factor, as.character) %>% 
-  rowwise() %>% 
-  mutate(sample_id_barcode = replace(sample_id_barcode, grepl("Plate", dna_plate_code, ignore.case = T), paste0(dna_plate_code, well))) %>% 
-  ungroup() %>% 
-  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
-  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
-  mutate(rfid = ifelse(
-    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
-    paste0("933000", sample_id_barcode),
-    ifelse(
-      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10,
-      paste0("93300", sample_id_barcode),
-      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode),
-             sample_id_barcode, sample_id_barcode)
-    ) 
-  )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
-  mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
-  rowwise() %>% 
-  mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
-  ungroup() %>% 
-  left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
-  rowwise() %>% 
-  mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
-  select(-u01) %>% 
-  left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
-  left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
-  ungroup() %>% 
-  mutate(date = openxlsx::convertToDate(date)) %>% 
-  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)"))
-
-# ch
-
-
-khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
-  mutate(
-    project_name = case_when(
-      grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
-      grepl("Plate", rfid) ~ "r01_su_guo",
-      grepl("Plate", dna_plate_code) ~ "r01_su_guo",
-      grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
-      grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
-      grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-      grepl("Jhou", u01) ~ "u01_tom_jhou",
-      grepl("Kalivas", u01) ~ "u01_peter_kalivas_us",
-      grepl("Chen", p50) ~ "p50_hao_chen", 
-      grepl("Richards", p50) ~ "p50_jerry_richards", 
-      grepl("Meyer", p50) ~ "p50_paul_meyer", 
-      TRUE ~ "NA"
-    )
-  ) %>%   # for the animals for which we don't have shipment info for
-  naniar::replace_with_na_all(condition = ~ .x %in% c("NA", "N/A", "None")) %>% 
-  select(-one_of("u01", "p50", "v1", "v2"))
-
-
-con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
-dbWriteTable(con, c("sample_tracking","extraction_log"), value = khai_spleenextraction_df_fordb, row.names = FALSE)
-dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD PRIMARY KEY(rfid,project_name)")
-dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD UNIQUE(dna_plate_code,rfid,well)")
-# run when combined_master_table is complete
-# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD FOREIGN KEY(rfid) REFERENCES sample_tracking.combined_master_table(rfid)")
+# khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
+#   mutate(
+#     project_name = case_when(
+#       grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
+#       grepl("Plate", rfid) ~ "r01_su_guo",
+#       grepl("Plate", dna_plate_code) ~ "r01_su_guo",
+#       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+#       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+#       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+#       grepl("Jhou", u01) ~ "u01_tom_jhou",
+#       grepl("Kalivas", u01) ~ "u01_peter_kalivas_us",
+#       grepl("Chen", p50) ~ "p50_hao_chen", 
+#       grepl("Richards", p50) ~ "p50_jerry_richards", 
+#       grepl("Meyer", p50) ~ "p50_paul_meyer", 
+#       TRUE ~ "NA"
+#     )
+#   ) %>%   # for the animals for which we don't have shipment info for
+#   naniar::replace_with_na_all(condition = ~ .x %in% c("NA", "N/A", "None")) %>% 
+#   select(-one_of("u01", "p50", "v1", "v2"))
+# 
+# 
+# con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
+# dbWriteTable(con, c("sample_tracking","extraction_log"), value = khai_spleenextraction_df_fordb, row.names = FALSE)
+# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD PRIMARY KEY(rfid,project_name)")
+# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD UNIQUE(dna_plate_code,rfid,well)")
+# # run when combined_master_table is complete
+# # dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD FOREIGN KEY(rfid) REFERENCES sample_tracking.combined_master_table(rfid)")
 
 
 
