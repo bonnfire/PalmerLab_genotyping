@@ -12,12 +12,15 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_Shippin
 ## KHAI EXTRACTION TABLE 
 ######################## 
 
+# https://docs.google.com/spreadsheets/d/1ye6Vx7vuf7T2grUlGtH0lbKSCU-aLhIy_CVZHfN48yw/edit#gid=1476254388
 # modifying code to extract from multiple google sheets
 #install.packages("googlesheets4")
-khai_tissueextractionNames <- googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)] #extract the id code associated with the U01 Spleen&Fish Extraction Database 
+khai_tissueextractionNames <- googlesheets4::sheet_names(
+  googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)]
+  ) #extract the id code associated with the U01 Spleen&Fish Extraction Database 
 
 khai_tissueextraction <- lapply(khai_tissueextractionNames, function(x){             
-  googlesheets4::sheets_read(googlesheets4::gs4_find()$id[1],sheet = x) 
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[1],sheet = x) 
 }) # extract all sheets in this workbook
 
 
@@ -43,8 +46,17 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
   mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
   rowwise() %>% 
-  mutate(rfid = replace(rfid, grepl("mismatch", comments), transponder)) %>% 
-  ungroup() %>% 
+  mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
+         rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294") #fix the dupe rfid
+  ) %>% ### 
+  ungroup() 
+
+# check for dupes before joining to project names
+khai_tissueextraction_df %>% get_dupes(rfid)
+
+
+# separate the joining to prevent needing to compile all shipment data from other u01s and p50 to generate project specific data
+khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
   left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
   mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
@@ -52,12 +64,51 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
          u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
-  select(-u01) %>% 
+  select(-c("u01", "experiment")) %>% 
   left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
   left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
   ungroup() %>% 
   mutate(date = openxlsx::convertToDate(date)) %>% 
-  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)"))
+  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)")) %>% 
+  mutate(
+    project_name = case_when(
+      grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
+      grepl("Plate", rfid) ~ "r01_su_guo",
+      grepl("Plate", dna_plate_code) ~ "r01_su_guo",
+      grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+      grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+      grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+      grepl("Jhou", u01) ~ "u01_tom_jhou",
+      grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+      grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
+      grepl("Chen", p50) ~ "p50_hao_chen",
+      grepl("Richards", p50) ~ "p50_jerry_richards",
+      grepl("Meyer", p50) ~ "p50_paul_meyer",
+      TRUE ~ "NA"
+    )
+  )
+
+## CREATE LIBRARY, PROJECT_NAME FOR SEQUENCING RUN
+library_project_name <- khai_tissueextraction_df_join %>% 
+  distinct(riptide_plate_number, project_name) %>% 
+  group_by(riptide_plate_number) %>%
+  summarise(project_name = paste(project_name, collapse = ',')) %>% 
+  mutate_all(~gsub(" ", "", .)) %>% 
+  mutate(riptide_plate_number = gsub("-","",riptide_plate_number)) # to join to flowcell format
+
+
+### CREATE TISSUE TABLE
+tissue_df <- khai_tissueextraction_df_join %>%
+  mutate(tissue_type = NA,
+    tissue_type = replace(tissue_type, !is.na(storage_box_of_spleen), "spleen")) %>% 
+  select(rfid, project_name, tissue_type, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments)
+
+
+### CREATE EXTRACTION LOG TABLE
+extraction_log <- khai_tissueextraction_df_join %>%
+  select(rfid, project_name, dna_plate_code, well, nanodrop_ng_u_l, comments)
+
+
 
 
 

@@ -38,6 +38,11 @@ flowcell_df <- flowcell %>% rbindlist(idcol = "filename", fill = T, use.names = 
 flowcell_df %>% mutate_at(vars(one_of("library")), as.factor) %>% summary()
 flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 
+flowcell_df %>% get_dupes(rfid)
+
+flowcell_df <- flowcell_df %>% 
+  mutate(comment = ifelse(rfid == "933000120138361"&library=="Riptide-01", "dupe ID fixed 07/23/2020", comment), 
+    rfid = replace(rfid, rfid == "933000120138361"&library=="Riptide-01", "933000120138561"))
 
 ## assign project_name 
 flowcell_df_fordb <- flowcell_df %>% 
@@ -51,11 +56,14 @@ flowcell_df_fordb <- flowcell_df %>%
       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
       grepl("Jhou", u01) ~ "u01_tom_jhou")
-    ) # for the animals for which we don't have shipment info for 
+    ) %>%  # for the animals for which we don't have shipment info for 
+  mutate(rfid = coalesce(rfid, sample_id))
   # select(-one_of("u01")) %>% 
   # rename("rfid" = "sample_id_demul") 
   
-
+## CREATE SAMPLE BARCODE LIBRARY TABLE
+sample_barcode_lib <- flowcell_df_fordb %>% 
+  select(rfid, project_name, barcode, library, comment)
 
 
 
@@ -92,11 +100,16 @@ dbExecute(con, "SELECT COLUMN_NAME FROM sample_tracking.sample_barcode_library")
 # }
 # write.xlsx(dataframe, file='Flowcell_Sample_Sheet.xlsx')
 
+## Sending data to Graham 07/22/2020
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
+genotype <- list()
+genotype[[1]] <- read.csv("2020-01-16-Flowcell Sample-Barcode list-Riptide-UMich2-Riptide03_NovaSeq01 (copy for Riyan).csv") %>% clean_names %>% mutate_all(as.character)
+genotype[[2]] <- read.csv("SampleSheet.csv") %>% clean_names %>% mutate_all(as.character) %>% rename("barcode" = "sample_barcode", "library" = "library_id")
 
-
-
-
-
+genotype_df <- genotype %>% rbindlist(fill = T)
+# for hs rats, riyan is using [sample_id]-[sample_name] as the unique combination
+genotype_df <- genotype_df %>% mutate(genotype_id = paste0(sample_id, "-", sample_name),
+                                      genotype_id = gsub(" ", "", genotype_id))
 
 
 

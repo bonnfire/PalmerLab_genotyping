@@ -21,14 +21,46 @@ source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/u01_huda_
 
 
 
-combined <- list(p50 = shipments_p50_df[, c("p50", "rfid", "sex")],
-     u01 = shipments_df[, c("u01", "rfid", "sex")], 
+combined <- list(p50 = shipments_p50_df[, c("p50", "rfid", "sex", "coatcolor")],
+     u01 = shipments_df[, c("u01", "rfid", "sex", "coatcolor")], 
      pcal = pcal_sample_info_df[ , c("plate", "rfid")],
      zebrafish = zebrafish_sample_info_df[, c("plate", "rfid")], 
-     huda_df = huda_df,
-     ...) 
+     huda_df = huda_df) 
 
 # run when you have the information for pcal, zebrafish, and huda
-combined_df <- combined %>% 
+# previously named combined_df
+sample_metadata <- combined %>% 
   rbindlist(fill = T) %>% 
-  mutate_all(~gsub(" ", "", .)) # remove all spaces for better joining (Library # -> Library#)
+  mutate_all(~gsub(" ", "", .)) %>%  # remove all spaces for better joining (Library # -> Library#)
+  rowwise() %>% 
+  mutate(project_name = replace(project_name, is.na(project_name), 
+                                case_when(
+                                  grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
+                                  grepl("Plate", rfid) ~ "r01_su_guo",
+                                  grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+                                  grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+                                  grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+                                  grepl("Jhou", u01) ~ "u01_tom_jhou",
+                                  grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
+                                  grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+                                  grepl("Meyer", p50) ~ "p50_paul_meyer",
+                                  grepl("Richards", p50) ~ "p50_jerry_richards",
+                                  grepl("Chen", p50) ~ "p50_hao_chen",
+                                TRUE ~ "NA")
+  )) %>% 
+  mutate(organism = case_when(
+    project_name %in% c("p50_paul_meyer", "p50_jerry_richards", "p50_hao_chen",
+                        "u01_peter_kalivas_italy", "u01_peter_kalivas_us","u01_tom_jhou",
+                        "u01_suzanne_mitchell", "u01_olivier_george_cocaine", "u01_olivier_george_oxycodone",
+                        "u01_huda_akil") ~ "rat", 
+    project_name == "r01_su_guo" ~ "zebrafish",
+    project_name == "pcal_brian_trainor" ~ "mouse"
+  )) %>% 
+  ungroup() %>% 
+  mutate(strain = NA, 
+         comments = NA) %>% 
+  add_count(rfid) %>% 
+  mutate(comments = replace(comments, n == 2, "Scrub")) %>% 
+  select(rfid, sex, coatcolor, project_name, organism, strain, comments) 
+  
+

@@ -46,21 +46,26 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   separate_rows(library_name, sep = ",") %>% 
   mutate_at(vars(matches("library_")), str_trim) %>% # remove leading and trailing whitespace from string
   mutate_at(vars(matches("library_")), str_squish) %>% # remove repeated whitespace inside string
-  left_join(., library_riptide %>% 
-              select(riptide_number_library_name, plate_name) %>% 
-              mutate(riptide_number_library_name = gsub("[[:space:]]", "", riptide_number_library_name)), 
-            by = c("library_name" = "riptide_number_library_name")) %>% 
-  mutate(
-  project_name = case_when(
-    grepl("Olivier") ~ "",
-    
-    TRUE ~ "NA"
-  )
-) # include the schema names
+  left_join(., library_project_name, by = c("library_name" = "riptide_plate_number")) %>% 
+  separate_rows(project_name, sep=c(","))  %>% # create separate rows for each plate
+  rowwise() %>% 
+  mutate(project_name = replace(project_name, is.na(project_name), case_when(
+      grepl("umich", library_name, ignore.case = T) ~ "u01_huda_akil",
+      grepl("zebrafish", library_name, ignore.case = T) ~ "r01_su_guo",
+      TRUE ~ "NA"
+    )
+  )) %>% # include the schema names
+  ungroup()
 
 # save object temporarily for apurva's review 06/09/2020
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
 sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")
+
+
+# CREATE SEQUENCING RUN LOG
+sequencing_run_log <- sequencing_run_log_IGM_df %>% 
+  mutate(sequencing_facility_name = "IGM") %>% # placeholder XX 07/23/2020 
+  select(project_name, date_samples_submitted, sequencing_facility_name, date_sequenced, full_run_id)
 
 ## upload into the dropbox 
 

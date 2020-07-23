@@ -65,15 +65,11 @@ jhou_spleen_test3 %<>% rename("rfid" = "last4ofmicrochip") %<>% subset(., select
 jhou_spleen_test3 %>% left_join(., WFU_Jhou_test_df[, c("cohort", "rfid")], by = "rfid") %>% select(cohort) %>% table()
 
 
-## XX 
 ###########################
 ###### OLIVIER ############
 ###########################
+# both cocaine and oxycodone are included here
 
-
-###########################
-###### OLIVIER ############
-###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
 olivier_spleen_raw <- readxl::read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
 # olivier_spleen_cells_raw <- tidyxl::xlsx_cells(path = "Olivier Spleens Oxy and Coc 91319.xlsx/TissueShipments")
@@ -140,9 +136,50 @@ olivier_spleen_raw_2 <- u01.importxlsx("Spleens for Abe Oxy and Coc 20200110.xls
 ## join all shipment sheets
 olivier_spleens_df <- plyr::rbind.fill(olivier_spleen_list_df, olivier_spleen_raw_2)
 
+# USE BELOW OBJECT (cleaned)
+## QC and verify that cohort information is correct and rfid's are valid
+
+# print below to see which cohort info is wrong
+WFU_OlivierCocaine_test_df %>% 
+  mutate(experiment = "Cocaine") %>% 
+  select(rfid, cohort, experiment) %>% 
+  rbind(WFU_OlivierOxycodone_test_df %>% 
+          mutate(experiment = "Oxy") %>% 
+          select(rfid, cohort, experiment)) %>% 
+  left_join(olivier_spleens_df, by = c("rfid", "experiment")) %>%
+  rename("wfu_cohort" = "cohort.x",
+         "shipment_cohort" = "cohort.y") %>% 
+  mutate(wfu_cohort = paste0("C", wfu_cohort)) %>% 
+  subset(shipment_cohort != wfu_cohort | 
+           is.na(wfu_cohort))
+
+# are the counts of the df's the same 
+WFU_OlivierCocaine_test_df %>% 
+  mutate(experiment = "Cocaine") %>% 
+  select(rfid, cohort, experiment) %>% 
+  rbind(WFU_OlivierOxycodone_test_df %>% 
+          mutate(experiment = "Oxy") %>% 
+          select(rfid, cohort, experiment)) %>% 
+  left_join(.,olivier_spleens_df, by = c("rfid", "experiment")) %>%
+  rename("wfu_cohort" = "cohort.x",
+         "shipment_cohort" = "cohort.y") %>% 
+  mutate(wfu_cohort = paste0("C", wfu_cohort)) %>% 
+  subset(!is.na(shipment_cohort)) %>% dim
+olivier_spleens_df %>% dim
 
 
-
+## XX come back to this after you attach the missing rfids
+anti_join(olivier_spleens_df, WFU_OlivierCocaine_test_df %>% 
+            mutate(experiment = "Cocaine") %>% 
+            select(rfid, cohort, experiment) %>% 
+            rbind(WFU_OlivierOxycodone_test_df %>% 
+                    mutate(experiment = "Oxy") %>% 
+                    select(rfid, cohort, experiment)) %>% 
+            left_join(.,olivier_spleens_df, by = c("rfid", "experiment")) %>%
+            rename("wfu_cohort" = "cohort.x",
+                   "shipment_cohort" = "cohort.y") %>% 
+            mutate(wfu_cohort = paste0("C", wfu_cohort)) %>% 
+            subset(!is.na(shipment_cohort)), by = "rfid")
 
 
 
