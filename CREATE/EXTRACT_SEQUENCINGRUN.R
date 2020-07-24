@@ -65,9 +65,8 @@ sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IG
 
 # CREATE SEQUENCING RUN LOG
 sequencing_run_log <- sequencing_run_log_IGM_df %>% 
-  mutate(sequencing_facility_name = "IGM", # placeholder XX 07/23/2020 
-         comments = NA) %>% 
-  select(project_name, date_samples_submitted, sequencing_facility_name, date_sequenced, full_run_id, comments)
+  mutate(sequencing_facility_name = "IGM") # placeholder XX 07/23/2020
+
 
 ## upload into the dropbox 
 
