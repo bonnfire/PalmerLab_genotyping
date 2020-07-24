@@ -19,50 +19,53 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_WFU_U01_ShippingMas
 ###### JHOU ###############
 ###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
-jhou_spleen_raw <- read_excel(path = "Jhou_2019- 06-11 U01 Spleen and Ceca shipment .xlsx", col_names = F)
-jhou_spleen_test <- jhou_spleen_raw
-names(jhou_spleen_test) <- jhou_spleen_raw[1,] %>% as.character()
-jhou_spleen_test <- jhou_spleen_test[-1,]
-names(jhou_spleen_test) <- mgsub::mgsub(names(jhou_spleen_test),
-                               c(" |\\.", "Microchip ID#", "Date of Birth|Birth Date", "Date of Wean|Wean Date","Animal", "Shipping|Ship", "Dams"),
-                               c("", "RFID", "DOB", "DOW","LabAnimal", "Shipment", "Dames")) %>% 
-  tolower()
-jhou_spleen_test %<>% subset(., select = which(!duplicated(names(.)))) #remove duplicated columns
 
+jhou_tissue_shipments_files <- c("Jhou_2019- 06-11 U01 Spleen and Ceca shipment .xlsx", 
+                                 "05-05-2020 Spleen shipment .xlsx",
+                                 "05-12-2020 Spleen Shipment.xlsx")
+                                 
+jhou_tissue_shipments <- lapply(jhou_tissue_shipments_files, function(x){
+  x <- read_excel(path = x, col_names = T) %>% 
+    clean_names() %>% 
+    rename_at(vars(matches("microchip")), function(x) "rfid") %>% 
+    rename_at(vars(matches("jhou_lab_id|animal_id")), function(x) "labanimalid") %>% 
+    subset(select = which(!duplicated(names(.)))) %>% #remove duplicated columns
+    select(matches("rfid|labanimalid|sex|spleen|cecum|note|comment")) %>%  # select columns of interest
+    mutate_all(as.character)
+  return(x)
+})
+names(jhou_tissue_shipments) <- c("06-11-2019", "05-05-2020", "05-12-2020")
+jhou_tissue_shipments_df <- jhou_tissue_shipments %>% 
+  rbindlist(fill = T, idcol = "shipment_date") %>% 
+  subset(!is.na(rfid))
+
+# qc
+jhou_tissue_shipments_df %>% get_dupes(rfid) 
 # fix dupes # using the Summary All table from Jhou project
-jhou_spleen_test <- jhou_spleen_test %>% 
+jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
   mutate(rfid = replace(rfid, labanimalid == "U93"&sex == "M", "933000320046784"),
          rfid = replace(rfid, labanimalid == "U94"&sex == "M", "933000320046780"),
          rfid = replace(rfid, labanimalid == "U97"&sex == "F", "933000320046788"),
          rfid = replace(rfid, labanimalid == "U98"&sex == "F", "933000320046789"))
-jhou_spleen_test %>% get_dupes(rfid)
+# post fix qc
+jhou_tissue_shipments_df %>% get_dupes(rfid) 
 
-# jhou_extraction <- khai_spleenextraction_df %>% janitor::clean_names() %>% subset(grepl("jhou", dna_plate_code, ignore.case = T)) %>%  subset(., select = which(!duplicated(names(.))))
-
-## XX WORK ON MERGING THE TWO
-jhou_spleen_raw_2 <- read_excel(path = "05-12-2020 Spleen Shipment.xlsx", col_names = F)
-jhou_spleen_test2 <- jhou_spleen_raw_2
-names(jhou_spleen_test2) <- jhou_spleen_raw_2[1,] %>% as.character()
-jhou_spleen_test2 <- jhou_spleen_test2[-1,]
-names(jhou_spleen_test2) <- mgsub::mgsub(names(jhou_spleen_test2),
-                                        c(" |\\.|#", "Microchip #", "Date of Birth|Birth Date", "Date of Wean|Wean Date","Animal", "Shipping|Ship", "Dams"),
-                                        c("", "RFID", "DOB", "DOW","LabAnimal", "Shipment", "Dames")) %>% 
-  tolower()
-jhou_spleen_test2 %<>% subset(., select = which(!duplicated(names(.)))) %<>% subset(grepl("\\d{15}", rfid))
+# remove unwanted columns
+jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
+  select(-matches("labanimalid|sex"))
   
+# after rfid is fixed, fix format to get tissue type column
+jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
+  rowwise() %>% 
+  mutate(tissue_type = ifelse(grepl("Y", cecum, ignore.case = T)&grepl("Y", spleen, ignore.case = T), paste0("cecum,", cecum_box_id, ";", "spleen,", spleen_box_id), "spleen")) %>% 
+  # mutate(tissue_box = ifelse(!is.na(cecum_box_id)&!is.na(spleen_box_id), paste0(cecum_box_id, ",", spleen_box_id), NA)) %>% 
+  ungroup() %>% 
+  select(-matches("cecum|spleen")) %>% 
+  separate_rows(tissue_type, sep = ";") %>% 
+  separate(tissue_type, into = c("tissue_type", "tissue_box"), sep = ",") %>% 
+  select(rfid, tissue_type, tissue_type, notes) 
 
-
-## XX WORK ON MERGING THE THREE
-jhou_spleen_raw_3 <- read_excel(path = "05-05-2020 Spleen shipment .xlsx", col_names = F)
-jhou_spleen_test3 <- jhou_spleen_raw_3
-names(jhou_spleen_test3) <- jhou_spleen_raw_3[1,] %>% as.character()
-jhou_spleen_test3 <- jhou_spleen_test3[-1,]
-names(jhou_spleen_test3) <- mgsub::mgsub(names(jhou_spleen_test3),
-                                         c(" |\\.|#", "Microchip #", "Date of Birth|Birth Date", "Date of Wean|Wean Date","Animal", "Shipping|Ship", "Dams"),
-                                         c("", "RFID", "DOB", "DOW","LabAnimal", "Shipment", "Dames")) %>% 
-  tolower()
-jhou_spleen_test3 %<>% rename("rfid" = "last4ofmicrochip") %<>% subset(., select = which(!duplicated(names(.)))) %<>% subset(grepl("\\d{15}", rfid))
-jhou_spleen_test3 %>% left_join(., WFU_Jhou_test_df[, c("cohort", "rfid")], by = "rfid") %>% select(cohort) %>% table()
+## all of jhou spleen shipments
 
 
 ###########################
