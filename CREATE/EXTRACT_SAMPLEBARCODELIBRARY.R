@@ -68,7 +68,8 @@ flowcell_df_fordb <- flowcell_df %>%
   
 ## CREATE SAMPLE BARCODE LIBRARY TABLE
 sample_barcode_lib <- flowcell_df_fordb %>% 
-  select(rfid, project_name, barcode, library, comment)
+  rename("comments" = "comment") %>% 
+  select(rfid, project_name, barcode, library, comments)
 
 
 

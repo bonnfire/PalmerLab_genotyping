@@ -63,7 +63,8 @@ jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>%
   select(-matches("cecum|spleen")) %>% 
   separate_rows(tissue_type, sep = ";") %>% 
   separate(tissue_type, into = c("tissue_type", "tissue_box"), sep = ",") %>% 
-  select(rfid, tissue_type, tissue_type, notes) 
+  rename("comments"="notes") %>% 
+  select(rfid, tissue_type, tissue_type, comments) 
 
 ## all of jhou spleen shipments
 
@@ -123,7 +124,10 @@ olivier_spleen_raw_2 <- u01.importxlsx("Spleens for Abe Oxy and Coc 20200110.xls
          cohort = paste0("C", parse_number(cohort) %>% str_pad(2, "left", "0")))
 
 ## join all shipment sheets
-olivier_spleens_df <- plyr::rbind.fill(olivier_spleen_list_df, olivier_spleen_raw_2)
+olivier_spleens_df <- plyr::rbind.fill(olivier_spleen_list_df, olivier_spleen_raw_2) %>% 
+  mutate(tissue_type = "spleen",
+         comments = NA) %>% 
+  select(rfid, tissue_type, experiment)
 
 # USE BELOW OBJECT (cleaned)
 ## QC and verify that cohort information is correct and rfid's are valid
@@ -203,14 +207,13 @@ mitchell_extractspleen <- function(x){
 mitchell_shipments_spleen <- lapply(mitchell_shipments_files, mitchell_extractspleen) 
 names(mitchell_shipments_spleen) <- mitchell_shipments_files
 
-mitchell_shipments_spleen_df <- mitchell_shipments_spleen %>% rbindlist(fill = T, idcol = "sheet")
+mitchell_shipments_spleen_df <- mitchell_shipments_spleen %>% rbindlist(fill = T, idcol = "sheet") %>% 
+  rename("dissection_comments"="disecction_comments")
 
 # since there are two columns, one for barcode_number and another for rfid # do quick check to make sure that these are equal
 mitchell_shipments_spleen_df %>% subset(!is.na(barcode_number)) %>% subset(rfid != paste0("933000", barcode_number)) # since barcode_number is empty for shipment1 doc
 
 
-
-## XX 6/30/2020 fix the shipment3 spleen ceca original object, doesn't exist
 
 mitchell_extractceca <- function(x){
   spleen_shipments <- u01.importxlsx(x)$`Ceca Shipping Sheet` %>% 
@@ -225,39 +228,39 @@ mitchell_extractceca <- function(x){
 mitchell_shipments_ceca <- lapply(mitchell_shipments_files, mitchell_extractceca) 
 names(mitchell_shipments_ceca) <- mitchell_shipments_files
 mitchell_shipments_ceca_df <- mitchell_shipments_ceca %>% rbindlist(fill = T, idcol = "sheet") %>% 
-  dplyr::filter(grepl("^\\d+$", rfid))
+  dplyr::filter(grepl("^\\d+$", rfid)) 
 
 
 
 
-# mitchell_spleenceca_toprocess <- plyr::rbind.fill(mitchell_spleen_shipments, mitchell_ceca_shipments)
+mitchell_tissues_df <- plyr::rbind.fill(mitchell_shipments_spleen_df[, c("rfid", "shipping_box", "tissue", "dissection_comments", "resolutions")], 
+                                     mitchell_shipments_ceca_df[, c("rfid", "shipping_box", "tissue", "dissection_comments", "resolutions")]) %>%
+  mutate(dissection_comments = gsub("\"", "", dissection_comments)) %>% 
+  rename("tissue_type" = "tissue",
+         "comments" = "dissection_comments") %>% 
+  mutate(tissue_type = tolower(tissue_type)) %>% 
+  select(rfid, tissue_type, shipping_box, comments)
 
 
 ###########################
 ###### KALIVAS ############
 ###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
-kalivas_spleenceca_original_excel <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort information.xlsx")[-1] 
-kalivas_spleenceca_original_excel_updated <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort updated 20200214.xlsx")[-1] 
+# kalivas_spleenceca_original_excel <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort information.xlsx")[-1] 
+kalivas_spleen_xl <- u01.importxlsx("Kalivas U grant_Spleen collection_Cohort updated 20200214.xlsx")[-1] 
 
-kalivas_spleenceca_original_df <- kalivas_spleenceca_original_excel %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
+kalivas_tissues_df <- kalivas_spleen_xl %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
   clean_names() %>% 
   rename("rfid" = "microchip") %>% 
-  subset(grepl("Cohort", cohort)) %>% 
-  mutate(cohort = str_pad(str_extract(cohort, "\\d+"), 2, "left", "0"), sex = str_extract(toupper(sex), "\\D{1}")) %>% 
-  subset(grepl("^\\d+", rfid)) %>% 
-  select(-sex) 
-
-kalivas_spleenceca_original_excel_updated %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
-  clean_names() %>% 
-  rename("rfid" = "microchip") %>% 
-  subset(grepl("Cohort", cohort)) %>% 
-  mutate(cohort = str_pad(str_extract(cohort, "\\d+"), 2, "left", "0"), sex = str_extract(toupper(sex), "\\D{1}")) %>% 
-  subset(grepl("^\\d+", rfid)) %>% 
-  select(-sex) 
-# %>% 
-  # left_join(., WFU_Kalivas_test_df[, c("rfid", "sex", "cohort")], by = c("rfid", "cohort")) ## rfid and cohort match in the spleens
-
+  subset(grepl("Cohort", cohort)) %>% # remove the dead rats 
+  mutate(cohort = str_pad(str_extract(cohort, "\\d+"), 2, "left", "0"), 
+         sex = str_extract(toupper(sex), "\\D{1}")) %>% 
+  subset(grepl("^\\d+", rfid)) %>% # remove comments
+  mutate(tissue_type = "spleen",
+         tissue_type = replace(tissue_type, grepl("no spleen|tail", notes, ignore.case = T), "tail")) %>% 
+  rename("comments" = "notes") %>% 
+  select(rfid, tissue_type, comments)
+  
 # show to get the number of dead animals 
 # u01.importxlsx("Kalivas U grant_Spleen collection_Cohort information.xlsx")[-1] %>% rbindlist(idcol = "cohort", fill = T) %>% #get rid of the timeline sheet because it gives us many unwanted columns
 #   clean_names() %>% 
@@ -273,27 +276,15 @@ kalivas_spleenceca_original_excel_updated %>% rbindlist(idcol = "cohort", fill =
 #################################################
 
 
-## for khai's request for a spreadsheet with all delivered spleen 
-
-spleen_extraction_df <- list(
-  Jhou = jhou_spleen_test %>% subset(spleen == "Yes") %>% select(rfid, notes),
-  Mitchell = mitchell_shipments_spleen_df %>% subset(tissue == "Spleen") %>% select(rfid, notes),
-  Kalivas = kalivas_spleenceca_original_df %>% select(rfid, notes),
-  Olivier = olivier_spleen_list_df %>% select(rfid)
-) %>% rbindlist(fill = T, idcol = "u01")
-# quick qc before creating into excel sheet to share with khai
-spleen_extraction_df %>% subset(nchar(rfid) != 15|!grepl("^\\d", rfid)) 
-spleen_extraction_df %>% get_dupes(rfid) 
-
-# create the excel sheet as requested
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster")
-write.xlsx(spleen_extraction_df, "spleen_extraction_u01_04242020.xlsx")
-
-
-
 ### CREATE TISSUES TABLE
-tissue_df <- list(u01_tom_jhou = jhou_tissue_shipments_df, 
+tissues <- list(u01_tom_jhou = jhou_tissue_shipments_df, 
+                  u01_suzanne_mitchell = mitchell_tissues_df,
+                  u01_olivier_george_cocaine = olivier_spleens_df %>% subset(experiment == "Cocaine") %>% select(-experiment), 
+                  u01_olivier_george_oxycodone = olivier_spleens_df %>% subset(experiment == "Oxy") %>% select(-experiment), 
+                  us_peter_kalivas_us = kalivas_tissues_df
      )
-tissue_df <- tissue_df %>% 
+tissue_df <- tissues %>% 
   rbindlist(fill = T, idcol = "project_name") %>% 
-  left_join(, by = "rfid")
+  left_join(khai_tissueextraction_df_join[, c("rfid", "storage_box_of_spleen", "freezer_location_of_tissue")], by = "rfid") %>% ## XX when khai provides the link for the ceca storage info, UPDATE THIS LINE
+  mutate_at(vars(one_of("storage_box_of_spleen", "freezer_location_of_tissue")), ~replace(., tissue_type == "cecum", NA)) %>% 
+  select(rfid, project_name, tissue_type, shipping_box, storage_box_of_spleen, freezer_location_of_tissue, comments)
