@@ -75,20 +75,6 @@ jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>%
 
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
 olivier_spleen_raw <- readxl::read_excel(path = "Olivier Spleens Oxy and Coc 91319.xlsx", col_names = F)
-# olivier_spleen_cells_raw <- tidyxl::xlsx_cells(path = "Olivier Spleens Oxy and Coc 91319.xlsx/TissueShipments")
-# olivier_spleen_formats_raw <- xlsx_formats(path = "Olivier Spleens Oxy and Coc 91319.xlsx")
-
-# parse through indices using colors, couldn't work because of two observations 
-
-# using olivier_spleen_formats_raw$local$fill$patternFill$fgColor$rgb %>% unique()
-# why is the result of this only 6 when there are 9 categories? olivier_spleen_formats_raw$local$fill$patternFill$fgColor$rgb %>% na.omit %>% unique() %>% length()
-
-# test <- olivier_spleen_cells_raw %>% 
-#   filter(grepl("Cohort", olivier_spleen_cells_raw$character)) 
-# test$character_formatted is all NA 
-
-# parse through the data using location and order 
-# create dataframe with three cols: cohort, rfid, and labanimalid
 
 # assign colnames 
 names(olivier_spleen_raw)[seq(1, ncol(olivier_spleen_raw)-1, 2)] <- paste0("rfid")
@@ -163,7 +149,7 @@ WFU_OlivierCocaine_test_df %>%
   rbind(WFU_OlivierOxycodone_test_df %>% 
           mutate(experiment = "Oxy") %>% 
           select(rfid, cohort, experiment)) %>% 
-  left_join(.,olivier_spleens_df, by = c("rfid", "experiment")) %>%
+  left_join(.,olivier_spleens_df, by = c("rfid")) %>% # c("rfid", "experiment") results in 508 instead of 517; because of the naive animals
   rename("wfu_cohort" = "cohort.x",
          "shipment_cohort" = "cohort.y") %>% 
   mutate(wfu_cohort = paste0("C", wfu_cohort)) %>% 
@@ -171,105 +157,7 @@ WFU_OlivierCocaine_test_df %>%
 olivier_spleens_df %>% dim
 
 
-## XX come back to this after you attach the missing rfids
-anti_join(olivier_spleens_df, WFU_OlivierCocaine_test_df %>% 
-            mutate(experiment = "Cocaine") %>% 
-            select(rfid, cohort, experiment) %>% 
-            rbind(WFU_OlivierOxycodone_test_df %>% 
-                    mutate(experiment = "Oxy") %>% 
-                    select(rfid, cohort, experiment)) %>% 
-            left_join(.,olivier_spleens_df, by = c("rfid", "experiment")) %>%
-            rename("wfu_cohort" = "cohort.x",
-                   "shipment_cohort" = "cohort.y") %>% 
-            mutate(wfu_cohort = paste0("C", wfu_cohort)) %>% 
-            subset(!is.na(shipment_cohort)), by = "rfid")
-
-
-
-# QC: 
-# number of counts as the raw files: all numbers match cohorts 1:8 for cocaine, no cohort 6, and only 3 and 4 for oxy
-##  olivier_spleen_list_df %>% group_by(cohort, experiment) %>% count
-
-# sex count # a little unevent but not alarming
-olivier_spleen_sex <- olivier_spleen_list_df %>% group_by(cohort, experiment, sex) %>% summarize(sexcount = n())
-ggplot(olivier_spleen_list_df, aes(x = sex, fill = sex)) + 
-  geom_histogram(stat = "count") + 
-  facet_wrap(~cohort + experiment) + 
-  labs(title = "Spleens sent to UCSD for Oxy and Coc 9/13/19")
-
-# unique id's, no duplicate id's 
-## olivier_spleen_list_df[duplicated(olivier_spleen_list_df$rfid)]
-
-# are any of these found in naive 
-## extract from the u01_qc file  
-# list <- list(Olivier_co_naive <- rbindlist(WFU_Olivier_co_naive_test, use.names = T, idcol = "cohort"), 
-#              Olivier_ox_naive <- rbindlist(WFU_Olivier_ox_naive_test, use.names = T, idcol = "cohort")) 
-WFU_Olivier_co_naive_df <- rbindlist(WFU_Olivier_co_naive_test, use.names = T, idcol = "cohort")
-olivier_spleen_list_df %>% 
-  mutate(Cocaine_Naive = ifelse(experiment == "Cocaine" && rfid %in% WFU_Olivier_co_naive_df$rfid, "Naive", "Not Naive"),
-         Oxycodone_Naive = ifelse(experiment == "Oxycodone" && rfid %in% WFU_Olivier_co_naive_df$rfid, "Naive", "Not Naive")) %>% 
-  group_by(Cocaine_Naive, Oxycodone_Naive) %>% 
-  count() # All Not Naive
-
-# are any of the shipped spleens from the naive dataset 
-olivier_spleen_list_df %>% 
-  dplyr::filter(experiment == "Cocaine", rfid %in% WFU_Olivier_co_naive_df$rfid)
-# are any of the shipped spleens from the collected data 
-olivier_spleen_list_df %>% 
-  dplyr::filter(experiment == "Cocaine", rfid %in% selfadmin_df$rfid) %>%
-  group_by(cohort) %>% 
-  summarise(n = n())
-
-olivier_spleen_list_df %>%
-  dplyr::filter(experiment == "Cocaine") %>% 
-  group_by(cohort) %>% 
-  summarise(n = n())
-
-# which cohorts are the spleens from that don't have data
-olivier_spleen_list_df %>% 
-  dplyr::filter(experiment == "Cocaine", !rfid %in% selfadmin_df$rfid) %>% 
-  group_by(cohort) %>% 
-  summarise(n = n())
-# spleen that don't have data (test if they overlap with the truncated id's)
-olivier_spleen_list_df %>% 
-  dplyr::filter(experiment == "Cocaine", !rfid %in% selfadmin_df$rfid) %>% 
-  select(rfid) %>% 
-  mutate(nchar = nchar(rfid))
-
-# how many and which naive rats have data
-WFU_Olivier_co_naive_df %>% 
-  dplyr::filter(rfid %in% selfadmin_df$rfid) %>% 
-  group_by(cohort) %>% 
-  summarise(n = n())
-
-WFU_Olivier_co_naive_df %>% 
-  dplyr::filter(rfid %in% selfadmin_df$rfid)
-
-# are all of these found in the experiments 
-## extract from the u01_qc file  
-## merge the two olivier Rdata files and compare the long rfid 
-phenotyped_vs_spleens <- do.call("rbind", list(olivier_spleen_list_df$rfid, WFU_Olivier_ox_test_df$rfid, WFU_Olivier_co_test_df$rfid))
-any(duplicated(do.call("rbind", list(olivier_spleen_list_df$rfid, WFU_Olivier_ox_test_df$rfid, WFU_Olivier_co_test_df$rfid))))
-
-olivier_spleen_list_df %>% 
-  mutate(Cocaine_Data = ifelse(experiment == "Cocaine" && rfid %in% selfadmin_df$rfid, "Self admin data", "No self admin data")) %>% 
-         # ,
-         # Oxycodone_Data = ifelse(experiment == "Oxycodone" && rfid %in% WFU_Olivier_ox_naive_test$rfid, "Naive", "Not Naive")) %>% 
-  group_by(Cocaine_Data) %>% 
-           #, Oxycodone_Data) %>% 
-  count() # All 411 spleens have self admin data
-
-# check the number of characters in the rfid
-olivier_spleen_list_df %>% mutate(rfid_digits = nchar(rfid)) %>% filter(rfid_digits != 15) # all id's are 15 digits here
-WFU_Olivier_ox_test_df %>% mutate(rfid_digits = nchar(rfid)) %>% filter(rfid_digits != 15) # one case isn't 15 digits
-WFU_Olivier_co_test_df %>% dplyr::mutate(rfid_digits = nchar(rfid)) %>% dplyr::filter(rfid_digits != 15) # four cases aren't 15 digits
-
-olivier_spleen_list_df %>% 
-  dplyr::filter(experiment == "Cocaine", !rfid %in% selfadmin_df$rfid) %>% 
-  select(rfid) %>% 
-  mutate(nchar = nchar(rfid))
-
-# prepare table for Hannah 
+# prepare table for Hannah (which ones to start extracting and which ones to hold off on, because no phenotype data)
 # to create excel workbooks 
 library(tidyverse)
 library(openxlsx) 
@@ -293,27 +181,6 @@ writeData(wb, exp[1], to_genotype_olivier_cocaine)
 writeData(wb, exp[2], to_genotype_olivier_oxy)
 saveWorkbook(wb, file = "olivier_spleen_cocaine_oxy_to_genotype.xlsx", overwrite = TRUE)
 
-# use this function in the future to print the results of same analyses run on diff dataframes into multiple worksheets on excel 
-# createSpreadsheets <- function(species,r1,r2){
-#   ## Create new workbooks
-#   wb <- createWorkbook() 
-#   
-#   ## Create the worksheets
-#   addWorksheet(wb, sheetName = "Results1" )
-#   addWorksheet(wb, sheetName = "Results2" )
-#   
-#   ## Write the data
-#   writeData(wb, "Results1", r1)
-#   writeData(wb, "Results2", r2)
-#   
-#   ## Save workbook to working directory 
-#   saveWorkbook(wb, file = paste(species,".xlsx", sep=""), overwrite = TRUE)
-# }
-# 
-# ## create spreadsheets by calling our function for each species
-# for(s in exp){
-#   createSpreadsheets(s,to_genotype_olivier_cocaine,to_genotype_olivier_oxy)
-# }
 
 ###########################
 ###### MITCHELL ###########
@@ -425,4 +292,8 @@ write.xlsx(spleen_extraction_df, "spleen_extraction_u01_04242020.xlsx")
 
 
 ### CREATE TISSUES TABLE
-
+tissue_df <- list(u01_tom_jhou = jhou_tissue_shipments_df, 
+     )
+tissue_df <- tissue_df %>% 
+  rbindlist(fill = T, idcol = "project_name") %>% 
+  left_join(, by = "rfid")
