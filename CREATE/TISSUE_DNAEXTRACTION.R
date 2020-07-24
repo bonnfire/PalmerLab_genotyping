@@ -96,18 +96,12 @@ library_project_name <- khai_tissueextraction_df_join %>%
   mutate_all(~gsub(" ", "", .)) %>% 
   mutate(riptide_plate_number = gsub("-","",riptide_plate_number)) # to join to flowcell format
 
-
-### CREATE TISSUE TABLE
-tissue_df <- khai_tissueextraction_df_join %>%
-  mutate(tissue_type = NA,
-    tissue_type = replace(tissue_type, !is.na(storage_box_of_spleen), "spleen")) %>% 
-  select(rfid, project_name, tissue_type, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments)
-
-
 ### CREATE EXTRACTION LOG TABLE
 extraction_log <- khai_tissueextraction_df_join %>%
-  select(rfid, project_name, dna_plate_code, well, nanodrop_ng_u_l, comments)
-
+  select_if(~sum(!is.na(.)) > 0)
+mutate(tissue_type = NA,
+       tissue_type = replace(tissue_type, !is.na(storage_box_of_spleen), "spleen")) %>% 
+  select(rfid, project_name, tissue_type, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments)
 
 
 

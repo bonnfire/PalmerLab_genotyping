@@ -38,11 +38,16 @@ flowcell_df <- flowcell %>% rbindlist(idcol = "filename", fill = T, use.names = 
 flowcell_df %>% mutate_at(vars(one_of("library")), as.factor) %>% summary()
 flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 
+# check for dupes
 flowcell_df %>% get_dupes(rfid)
 
+# fix dupes
 flowcell_df <- flowcell_df %>% 
   mutate(comment = ifelse(rfid == "933000120138361"&library=="Riptide-01", "dupe ID fixed 07/23/2020", comment), 
     rfid = replace(rfid, rfid == "933000120138361"&library=="Riptide-01", "933000120138561"))
+
+# post fix check for dupes 
+flowcell_df %>% get_dupes(rfid)
 
 ## assign project_name 
 flowcell_df_fordb <- flowcell_df %>% 

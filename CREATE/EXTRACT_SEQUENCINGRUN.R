@@ -52,6 +52,7 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   mutate(project_name = replace(project_name, is.na(project_name), case_when(
       grepl("umich", library_name, ignore.case = T) ~ "u01_huda_akil",
       grepl("zebrafish", library_name, ignore.case = T) ~ "r01_su_guo",
+      grepl("Mortazavi-Sebat HS", project, ignore.case = T) ~ "u01_gymrek_sebat", 
       TRUE ~ "NA"
     )
   )) %>% # include the schema names

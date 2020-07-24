@@ -10,5 +10,13 @@ HS_n672_orig <- read.table("HS_n672_samplenames.txt")
 HS_n672_orig %>% 
   separate(V1, c("sample_id", "rfid"), "-") %>% 
   mutate(rfid = replace(rfid, sample_id == "120138361", "933000120138561")) %>% 
-  select(rfid)
+  select(rfid) %>% 
   write(file = "HS_n672_samplenames_fix.txt")
+
+  
+HS_n672_orig %>% 
+  subset(!grepl("^933000", rfid)) %>% 
+  select(rfid) %>%
+  unlist() %>% 
+  as.character() %>% 
+  write(file = "genotyped_P50_n48_07242020.txt")

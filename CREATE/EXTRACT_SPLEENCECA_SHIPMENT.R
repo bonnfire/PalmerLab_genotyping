@@ -419,3 +419,7 @@ spleen_extraction_df %>% get_dupes(rfid)
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster")
 write.xlsx(spleen_extraction_df, "spleen_extraction_u01_04242020.xlsx")
 
+
+
+### CREATE TISSUES TABLE
+
