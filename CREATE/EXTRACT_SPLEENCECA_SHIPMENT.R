@@ -271,6 +271,29 @@ kalivas_tissues_df <- kalivas_spleen_xl %>% rbindlist(idcol = "cohort", fill = T
 #   left_join(., WFU_Kalivas_test_df[, c("rfid", "sex", "cohort")], by = c("rfid")) %>% select(cohort) %>% table()
 
 
+
+###########################
+###### P50- JERRY #########
+###########################
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues")
+jerry_shipments <- read_excel("RatSampleCollection_Batch17_NY-Richards_11-13Mar2020.xlsx", col_names = F)
+names(jerry_shipments) <- jerry_shipments[2, ]
+jerry_shipments <- jerry_shipments %>% clean_names()
+
+# keep on the side for data dictionary 
+jerry_shipments_dictionary <- jerry_shipments[1:2,] %>% t()
+names(jerry_shipments_dictionary) <- c("varname_long", "varname_abv")
+
+jerry_shipments <- jerry_shipments[-c(1:2),]
+
+jerry_shipments_df <- jerry_shipments %>%
+  rename("rfid" = "rat_rfid") %>% 
+  mutate(datetime_dissected = openxlsx::convertToDate(as.numeric(datetime_dissected)) %>% as.character) %>% 
+  select(matches("rfid|date|box")) %>% 
+  gather(tissue, shipping_box, cecum_box:baculum_box) %>% 
+  mutate(tissue = gsub("_box", "", tissue)) 
+
+
 #################################################
 ###### ALL SPLEENS DELIVERED FOR EXTRACTION #####
 #################################################
@@ -278,10 +301,11 @@ kalivas_tissues_df <- kalivas_spleen_xl %>% rbindlist(idcol = "cohort", fill = T
 
 ### CREATE TISSUES TABLE
 tissues <- list(u01_tom_jhou = jhou_tissue_shipments_df, 
-                  u01_suzanne_mitchell = mitchell_tissues_df,
-                  u01_olivier_george_cocaine = olivier_spleens_df %>% subset(experiment == "Cocaine") %>% select(-experiment), 
-                  u01_olivier_george_oxycodone = olivier_spleens_df %>% subset(experiment == "Oxy") %>% select(-experiment), 
-                  us_peter_kalivas_us = kalivas_tissues_df
+                u01_suzanne_mitchell = mitchell_tissues_df,
+                u01_olivier_george_cocaine = olivier_spleens_df %>% subset(experiment == "Cocaine") %>% select(-experiment), 
+                u01_olivier_george_oxycodone = olivier_spleens_df %>% subset(experiment == "Oxy") %>% select(-experiment), 
+                us_peter_kalivas_us = kalivas_tissues_df,
+                p50_jerry_richards = jerry_shipments_df
      )
 tissue_df <- tissues %>% 
   rbindlist(fill = T, idcol = "project_name") %>% 

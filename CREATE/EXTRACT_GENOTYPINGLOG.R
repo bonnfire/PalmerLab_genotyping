@@ -5,6 +5,10 @@
 
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
 # from 07/23/2020
+# cd /projects/ps-palmer
+# bcftools concat rcheng/wgs/coreC/vcfs/HS/*.vcf.gz | gzip > b2lin/HS_n672_concat.vcf.gz
+# cd b2lin/HS_genotype
+# bcftools query -l HS_n672_concat.vcf.gz > HS_n672_samplenames.txt
 HS_n672_orig <- read.table("HS_n672_samplenames.txt") 
 # fix dupe ids and reassign the subject id to the vcf 
 HS_n672_orig %>% 
@@ -13,10 +17,51 @@ HS_n672_orig %>%
   select(rfid) %>% 
   write(file = "HS_n672_samplenames_fix.txt")
 
-  
+
+# send to apurva for the p50 id's 07/24/2020
 HS_n672_orig %>% 
   subset(!grepl("^933000", rfid)) %>% 
   select(rfid) %>%
   unlist() %>% 
   as.character() %>% 
   write(file = "genotyped_P50_n48_07242020.txt")
+
+
+
+###############
+#### SD RATS
+###############
+# cd /projects/ps-palmer
+# bcftools concat rcheng/wgs/coreC/vcfs/SD/*.vcf.gz | gzip > b2lin/SD_genotype/SD_n_concat.vcf.gz
+# bcftools query -l b2lin/SD_genotype/SD_n_concat.vcf.gz > b2lin/SD_genotype/SD_n_samplenames.txt
+
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
+SD_n_orig <- read.table("SD_n_samplenames.txt") 
+SD_n_orig %>% rename("rfid" = "V1") %>% mutate_all(as.character) %>% left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% select(project_name) %>% table()
+
+
+
+###############
+#### ZEBRAFISH
+###############
+# cd /projects/ps-palmer
+# mkdir b2lin/ZF_genotype
+# bcftools concat rcheng/wgs/coreC/vcfs/ZF/*.vcf.gz | gzip > b2lin/ZF_genotype/ZF_n_concat.vcf.gz
+# bcftools query -l b2lin/ZF_genotype/ZF_n_concat.vcf.gz > b2lin/ZF_genotype/ZF_n_samplenames.txt
+
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
+ZF_n_orig <- read.table("ZF_n_samplenames.txt") 
+ZF_n_orig %>% rename("rfid" = "V1") %>% mutate_all(as.character) %>% left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% select(project_name) %>% table()
+
+
+### MERGE ALL TABLES
+
+# assign project names to rfid
+genotyping = list(HS = HS, 
+                  SD = SD, 
+                  ZF = ZF) %>% rbindlist(fill = T)
+
+## XX currently only for HS_n672_orig but change to genotyping
+genotyping_df <- HS_n672_orig %>% left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") 
+genotyping_df %>% select(project_name) %>% table()
+

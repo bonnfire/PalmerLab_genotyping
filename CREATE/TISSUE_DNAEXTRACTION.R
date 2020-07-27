@@ -59,7 +59,6 @@ khai_tissueextraction_df %>% get_dupes(rfid)
 khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
   left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
-  ## XX left_join(., p50[, c("rfid", "p50)]) %>% 
   mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
          u01 = replace(u01, grepl("Coc", experiment)&!grepl("Co", u01), "Olivier_Oxy"),
          u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
