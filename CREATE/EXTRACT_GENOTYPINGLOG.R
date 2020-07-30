@@ -9,11 +9,11 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/
 # bcftools concat rcheng/wgs/coreC/vcfs/HS/*.vcf.gz | gzip > b2lin/HS_n672_concat.vcf.gz
 # cd b2lin/HS_genotype
 # bcftools query -l HS_n672_concat.vcf.gz > HS_n672_samplenames.txt
-HS_n672_orig <- read.table("HS_n672_samplenames.txt") 
+HS_n672_orig <- read.table("HS_n672_samplenames.txt") %>% 
+  separate(V1, c("sample_id", "rfid"), "-") %>% 
+  mutate(rfid = replace(rfid, sample_id == "120138361", "933000120138561"))
 # fix dupe ids and reassign the subject id to the vcf 
 HS_n672_orig %>% 
-  separate(V1, c("sample_id", "rfid"), "-") %>% 
-  mutate(rfid = replace(rfid, sample_id == "120138361", "933000120138561")) %>% 
   select(rfid) %>% 
   write(file = "HS_n672_samplenames_fix.txt")
 
@@ -26,7 +26,11 @@ HS_n672_orig %>%
   as.character() %>% 
   write(file = "genotyped_P50_n48_07242020.txt")
 
-
+HS_n672_orig <- HS_n672_orig %>% 
+  mutate(date = "07/21/2020",
+         user = "Riyan", 
+         location_on_tscc = "/projects/ps-palmer/rcheng/wgs/coreC/vcfs/HS") %>%
+  left_join(sample_barcode_lib[, c("rfid", "library", "project_name")], by = "rfid")
 
 ###############
 #### SD RATS
@@ -62,6 +66,6 @@ genotyping = list(HS = HS,
                   ZF = ZF) %>% rbindlist(fill = T)
 
 ## XX currently only for HS_n672_orig but change to genotyping
-genotyping_df <- HS_n672_orig %>% left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") 
+genotyping_df <- HS_n672_orig %>% left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") # to match the foreign key but could also be sample_barcode_lib
 genotyping_df %>% select(project_name) %>% table()
 

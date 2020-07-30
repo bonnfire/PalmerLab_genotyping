@@ -54,7 +54,7 @@ sample_metadata <- combined %>%
                         "u01_suzanne_mitchell", "u01_olivier_george_cocaine", "u01_olivier_george_oxycodone",
                         "u01_huda_akil") ~ "rat", 
     project_name == "r01_su_guo" ~ "zebrafish",
-    project_name == "pcal_brian_trainor" ~ "mouse"
+    project_name == "pcal_brian_trainor" ~ "california mouse"
   )) %>% 
   ungroup() %>% 
   mutate(strain = NA, 

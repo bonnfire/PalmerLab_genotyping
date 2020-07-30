@@ -248,3 +248,25 @@ extractions_khai_df %>% mutate(u01_group = gsub("_\\d+", "", u01), u01_cohort = 
 # extractions_flowcell %>% subset(transponder %in% WFU_OlivierOxycodone_test_df$rfid) %>% dim
 
 
+
+
+## 07/29/2020
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/Genotype")
+ims <- read.csv("ims_hs.csv")
+ims <- ims %>% 
+  separate(INDV, into = c("INDV", "rfid"), sep = "-")
+
+ims %>% 
+  subset(F_MISS > 0.1) %>% 
+  subset(!grepl("^000", rfid)) %>% 
+  mutate(rfid = replace(rfid, rfid == "933000520138331", "933000120138331")) %>% 
+  left_join(extraction_log[, c("rfid", "location_of_extracted_dna_plate_box", "storage_box_of_extracted_dna_plate", "freezer_location_of_tissue", "position_in_box")], by = "rfid") %>% 
+  subset(!is.na(location_of_extracted_dna_plate_box)) %>%  
+  head(96) %>% 
+  openxlsx::write.xlsx(file = "redo_ims_location_n96.xlsx")
+# %>% 
+  # subset(is.na(location_of_extracted_dna_plate_box)) %>% 
+  # left_join(sample_barcode_lib[ , c("library", "rfid")])
+
+# load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_hannah_rebecca.RData")
+# load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_celine.RData")
