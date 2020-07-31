@@ -56,7 +56,8 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
       TRUE ~ "NA"
     )
   )) %>% # include the schema names
-  ungroup()
+  ungroup() %>% 
+  mutate(full_run_id = gsub("/", "", full_run_id))
 
 # save object temporarily for apurva's review 06/09/2020
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
@@ -65,9 +66,24 @@ sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IG
 
 # CREATE SEQUENCING RUN LOG
 sequencing_run_log <- sequencing_run_log_IGM_df %>% 
-  mutate(sequencing_facility_name = "IGM") # placeholder XX 07/23/2020
-
+  mutate(sequencing_facility_name = "IGM") %>%  # placeholder XX 07/23/2020
+  naniar::replace_with_na_all(~.x %in% c("", "\"\"", "NA", "N/A")) %>% 
+  subset(!is.na(project_name)) %>% 
+  subset(library_name != "zebrafish")
 
 ## upload into the dropbox 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, user='postgres', password='postgres', dbname='PalmerLab_Datasets')
+dbWriteTable(con, c("sample_tracking", "sequencing_run_log"), value = sequencing_run_log, row.names = FALSE, overwrite = T)
+dbExecute(con,"ALTER TABLE sample_tracking.sequencing_run_log ADD CONSTRAINT flowcell_unique UNIQUE(date_samples_submitted,library_name,project_name)")
+
+# disconnect
+dbDisconnect(con)
+
+## in terminal
+cd /tmp
+sudo su postgres
+pg_dump -d PalmerLab_Datasets -t sample_tracking.sequencing_run_log > sequencing_run_log.sql
+exit
 
 

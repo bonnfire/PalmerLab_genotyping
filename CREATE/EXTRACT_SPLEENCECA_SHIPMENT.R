@@ -20,9 +20,12 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_WFU_U01_ShippingMas
 ###########################
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/20190829_wfu_u01_shippingmaster/TissueShipments")
 
-jhou_tissue_shipments_files <- c("Jhou_2019- 06-11 U01 Spleen and Ceca shipment .xlsx", 
+jhou_tissue_shipments_files <- c("U01 Spleen and Ceca shipment 20190319 (Thomas, Alen).xlsx",
+                                 "Jhou_2019- 06-11 U01 Spleen and Ceca shipment .xlsx", 
+                                 "2020-02-25 Spleen Shipment.xlsx",
                                  "05-05-2020 Spleen shipment .xlsx",
                                  "05-12-2020 Spleen Shipment.xlsx")
+# excluding  because the 06-11 is a file that includes the 20190319 samples
                                  
 jhou_tissue_shipments <- lapply(jhou_tissue_shipments_files, function(x){
   x <- read_excel(path = x, col_names = T) %>% 
@@ -34,19 +37,29 @@ jhou_tissue_shipments <- lapply(jhou_tissue_shipments_files, function(x){
     mutate_all(as.character)
   return(x)
 })
-names(jhou_tissue_shipments) <- c("06-11-2019", "05-05-2020", "05-12-2020")
+names(jhou_tissue_shipments) <- c("03-19-2019", "06-11-2019", "02-25-2020", "05-05-2020", "05-12-2020") # "U01 Spleen and Ceca shipment 20190319 (Thomas, Alen).xlsx" is included in the 06-11 file
 jhou_tissue_shipments_df <- jhou_tissue_shipments %>% 
   rbindlist(fill = T, idcol = "shipment_date") %>% 
   subset(!is.na(rfid))
 
 # qc
-jhou_tissue_shipments_df %>% get_dupes(rfid) 
+# fixing dupe rfids within the shipments date
+jhou_tissue_shipments_df %>% get_dupes(rfid, shipment_date) 
 # fix dupes # using the Summary All table from Jhou project
 jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
   mutate(rfid = replace(rfid, labanimalid == "U93"&sex == "M", "933000320046784"),
          rfid = replace(rfid, labanimalid == "U94"&sex == "M", "933000320046780"),
          rfid = replace(rfid, labanimalid == "U97"&sex == "F", "933000320046788"),
          rfid = replace(rfid, labanimalid == "U98"&sex == "F", "933000320046789"))
+
+# fixing dupe rfids across the shipments
+# remove the duplicated cases 
+jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
+  arrange(shipment_date) %>% 
+  group_by(rfid) %>% 
+  slice(1) %>% 
+  ungroup()
+
 # post fix qc
 jhou_tissue_shipments_df %>% get_dupes(rfid) 
 
@@ -62,9 +75,9 @@ jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>%
   ungroup() %>% 
   select(-matches("cecum|spleen")) %>% 
   separate_rows(tissue_type, sep = ";") %>% 
-  separate(tissue_type, into = c("tissue_type", "tissue_box"), sep = ",") %>% 
+  separate(tissue_type, into = c("tissue_type", "shipping_box"), sep = ",") %>% 
   rename("comments"="notes") %>% 
-  select(rfid, tissue_type, tissue_type, comments) 
+  select(rfid, tissue_type, tissue_type, shipping_box, comments) 
 
 ## all of jhou spleen shipments
 
@@ -291,7 +304,7 @@ jerry_shipments_df <- jerry_shipments %>%
   mutate(datetime_dissected = openxlsx::convertToDate(as.numeric(datetime_dissected)) %>% as.character) %>% 
   select(matches("rfid|date|box")) %>% 
   gather(tissue, shipping_box, cecum_box:baculum_box) %>% 
-  mutate(tissue = gsub("_box", "", tissue)) 
+  mutate(tissue_type = gsub("_box", "", tissue))
 
 
 #################################################
@@ -311,4 +324,5 @@ tissue_df <- tissues %>%
   rbindlist(fill = T, idcol = "project_name") %>% 
   left_join(khai_tissueextraction_df_join[, c("rfid", "storage_box_of_spleen", "freezer_location_of_tissue")], by = "rfid") %>% ## XX when khai provides the link for the ceca storage info, UPDATE THIS LINE
   mutate_at(vars(one_of("storage_box_of_spleen", "freezer_location_of_tissue")), ~replace(., tissue_type == "cecum", NA)) %>% 
-  select(rfid, project_name, tissue_type, shipping_box, storage_box_of_spleen, freezer_location_of_tissue, comments)
+  select(rfid, project_name, tissue_type, shipping_box, storage_box_of_spleen, freezer_location_of_tissue, comments) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("", "\"\"", "NA", "N/A", "None"))

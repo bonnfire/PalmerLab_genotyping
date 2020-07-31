@@ -51,18 +51,21 @@ flowcell_df %>% get_dupes(rfid)
 
 ## assign project_name 
 flowcell_df_fordb <- flowcell_df %>% 
-  left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the animals for which we have shipment info for 
-  mutate(
-    project_name = case_when(
-      grepl("umich", library, ignore.case = T) ~ "u01_huda_akil",
-      grepl("p\\.cal", sample_id_demul) ~ "pcal_brian_trainor",
-      grepl("Plate", sample_id_demul) ~ "r01_su_guo",
-      grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
-      grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
-      grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-      grepl("Jhou", u01) ~ "u01_tom_jhou")
-    ) %>%  # for the animals for which we don't have shipment info for 
-  mutate(rfid = coalesce(rfid, sample_id))
+  mutate(rfid = coalesce(rfid, sample_id)) %>% 
+  left_join(sample_metadata[, c("rfid", "project_name")], by ="rfid") %>% 
+  mutate(library = gsub("Riptide-", "Riptide", library))
+  # left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the animals for which we have shipment info for 
+  # mutate(
+  #   project_name = case_when(
+  #     grepl("umich", library, ignore.case = T) ~ "u01_huda_akil",
+  #     grepl("p\\.cal", sample_id_demul) ~ "pcal_brian_trainor",
+  #     grepl("Plate", sample_id_demul) ~ "r01_su_guo",
+  #     grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+  #     grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+  #     grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+  #     grepl("Jhou", u01) ~ "u01_tom_jhou")
+  #   ) %>%  # for the animals for which we don't have shipment info for 
+  # mutate(rfid = coalesce(rfid, sample_id))
   # select(-one_of("u01")) %>% 
   # rename("rfid" = "sample_id_demul") 
   
@@ -79,7 +82,7 @@ sample_barcode_lib <- flowcell_df_fordb %>%
 ## upload the pgdump file into the db
 
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
-dbWriteTable(con, c("sample_tracking","sample_barcode_library"), value = flowcell_df_fordb, row.names = FALSE)
+dbWriteTable(con, c("sample_tracking","sample_barcode_library"), value = sample_barcode_lib, row.names = FALSE)
 
 dbExecute(con,"ALTER TABLE sample_tracking.sample_barcode_library RENAME COLUMN \"sample_id_demul\" TO \"rfid\"")
 dbExecute(con,"ALTER TABLE sample_tracking.sample_barcode_library ADD PRIMARY KEY(rfid,project_name)")
