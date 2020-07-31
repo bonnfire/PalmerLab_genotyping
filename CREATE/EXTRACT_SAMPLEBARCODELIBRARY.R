@@ -99,7 +99,13 @@ write.csv(sample_barcode_lib, file = "sample_barcode_lib.csv", row.names = F)
 flowcell_df %>% 
   mutate(rfid = coalesce(rfid, sample_id)) %>% 
   left_join(sample_metadata[, c("rfid", "project_name")], by ="rfid") %>% 
-  mutate(library = gsub("Riptide-", "Riptide", library)) %>% subset(is.na(project_name)&library=='UMich8_Fish')
+  mutate(library = gsub("Riptide-", "Riptide", library)) %>% subset(is.na(project_name)&library=='UMich8_Fish') %>% 
+  rename("comments" = "comment") %>% 
+  mutate(comments = "Test samples with high missing rate, exclude from imputation, no phenotypes") %>% 
+  select(rfid, project_name, barcode, library, comments, flag) %>% 
+  write.csv(file = "no_phenotype_fish_sample_barcode_lib.csv", row.names = F)
+
+
 
 
 ## upload the pgdump file into the db

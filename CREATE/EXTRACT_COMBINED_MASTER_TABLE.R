@@ -83,6 +83,22 @@ sample_metadata <- combined %>%
 write.csv(sample_metadata, file = "sample_metadata.csv", row.names = F)
 
 
+## exception for getting data from genotyping file 
+flowcell_df %>% 
+  mutate(rfid = coalesce(rfid, sample_id)) %>% 
+  left_join(sample_metadata[, c("rfid", "project_name")], by ="rfid") %>% 
+  mutate(library = gsub("Riptide-", "Riptide", library)) %>% subset(is.na(project_name)&library=='UMich8_Fish') %>% 
+  rename("comments" = "comment") %>% 
+  mutate(comments = "Test samples with high missing rate, exclude from imputation, no phenotypes",
+         sex = NA, 
+         coatcolor = NA, 
+         project_name = "r01_su_guo", 
+         organism = NA, 
+         strain = "Ekkwill fish") %>% 
+  select(rfid, sex, coatcolor, project_name, organism, strain, comments) %>% 
+  write.csv(file = "no_phenotype_fish_sample_metadata.csv", row.names = F)
+
+
 # dbExecute(con, "CREATE TABLE sample_tracking.sample_metadata (
 # 	rfid VARCHAR(19) NOT NULL, 
 # 	sex VARCHAR(4), 
