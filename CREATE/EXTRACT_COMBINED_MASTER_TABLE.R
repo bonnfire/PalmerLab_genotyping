@@ -14,7 +14,7 @@ source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/WFU_U01_M
 #for pcal
 source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/pcal_brian_trainor/CREATE/CREATE_SAMPLEIDS_LIBPREP.R")
 #for zebrafish
-source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/CREATE_SAMPLEIDS_LIBPREP.R")
+source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/CREATE_EXCEL.R") # instead of CREATE_SAMPLEIDS_LIBPREP.R
 #for huda
 source("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/u01_huda_akil/data_cleanup_Akil_SD.R")
 
@@ -25,12 +25,21 @@ shipments_df <- shipments_df %>%
   mutate(cohort = replace(cohort, u01 == "Olivier_Scrub", NA)) %>% 
   distinct()
 
-zebrafish_sample_info_df <- zebrafish_sample_info_df %>% mutate(project_name = "r01_su_guo")
+# this is after the id's have been processed
+# zebrafish_sample_info_df <- zebrafish_sample_info_df %>% mutate(project_name = "r01_su_guo")
+Zebrafish_Guo_xl <- Zebrafish_Guo_xl %>% mutate(project_name = "r01_su_guo") %>% 
+  rename("rfid" = "fish_id") %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("\\d+_Plate\\d+_", rfid), gsub("_", "", rfid))) %>% 
+  ungroup()
+
+
 
 combined <- list(p50 = shipments_p50_df[, c("p50", "rfid", "sex", "coatcolor")],
      u01 = shipments_df[, c("u01", "rfid", "sex", "coatcolor")], 
      pcal = pcal_sample_info_df[ , c("plate", "rfid")],
-     zebrafish = zebrafish_sample_info_df[, c("plate", "rfid", "project_name")], 
+     zebrafish = Zebrafish_Guo_xl[, c("rfid", "project_name")],
+     # zebrafish = zebrafish_sample_info_df[, c("plate", "rfid", "project_name")], 
      huda_df = huda_df) 
 
 # run when you have the information for pcal, zebrafish, and huda
@@ -59,30 +68,31 @@ sample_metadata <- combined %>%
     project_name %in% c("p50_paul_meyer", "p50_jerry_richards", "p50_hao_chen",
                         "u01_peter_kalivas_italy", "u01_peter_kalivas_us","u01_tom_jhou",
                         "u01_suzanne_mitchell", "u01_olivier_george_cocaine", "u01_olivier_george_oxycodone",
+                        "u01_oliver_george_scrub",
                         "u01_huda_akil") ~ "rat", 
     project_name == "r01_su_guo" ~ "zebrafish",
     project_name == "pcal_brian_trainor" ~ "california mouse"
   )) %>% 
   ungroup() %>% 
   mutate(strain = NA, 
-         comments = NA) %>% 
-  add_count(rfid) %>% 
-  mutate(comments = replace(comments, n == 2, "Scrub")) %>% 
+         comments = NA) %>% distinct() %>%  
+  # add_count(rfid) %>% 
+  # mutate(comments = replace(comments, n == 2, "Scrub")) %>% 
   select(rfid, sex, coatcolor, project_name, organism, strain, comments) 
   
+write.csv(sample_metadata, file = "sample_metadata.csv", row.names = F)
 
 
-
-dbExecute(con, "CREATE TABLE sample_tracking.sample_metadata (
-	rfid VARCHAR(19) NOT NULL, 
-	sex VARCHAR(4), 
-	coatcolor VARCHAR(9), 
-	project_name VARCHAR(28) NOT NULL, 
-	organism VARCHAR(9) NOT NULL, 
-	strain VARCHAR(32), 
-	comments VARCHAR(5),
-CONSTRAINT sample_metadata_pk PRIMARY KEY(rfid)
-);")
+# dbExecute(con, "CREATE TABLE sample_tracking.sample_metadata (
+# 	rfid VARCHAR(19) NOT NULL, 
+# 	sex VARCHAR(4), 
+# 	coatcolor VARCHAR(9), 
+# 	project_name VARCHAR(28) NOT NULL, 
+# 	organism VARCHAR(9) NOT NULL, 
+# 	strain VARCHAR(32), 
+# 	comments VARCHAR(5),
+# CONSTRAINT sample_metadata_pk PRIMARY KEY(rfid)
+# );")
 
 
 

@@ -35,57 +35,99 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
   naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
   dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
   mutate(rfid = ifelse(
-    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9,
+    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
     paste0("933000", sample_id_barcode),
     ifelse(
-      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10,
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
       paste0("93300", sample_id_barcode),
-      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode),
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode) & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
              sample_id_barcode, sample_id_barcode)
     ) 
   )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
   mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
-         rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294") #fix the dupe rfid
-  ) %>% ### 
-  ungroup() 
+         rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294"), #fix the dupe rfid
+         rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid, ignore.case = T), gsub("_", "", rfid)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("20200617Plate", "20200616Plate", rfid)
+  ) %>% ###
+  mutate(rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid), gsub("_", "", rfid)),
+         riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
+  ungroup() %>% 
+  distinct() ## XX look into why p50_jerry_richards are multiplied 4x
 
-# check for dupes before joining to project names
+
+# join to the founders (?) -- not found in khai's database 
+# 07/31/2020
+setwd("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
+ucsf_zebrafish <- read_xlsx("nanodrop zebrafish results 12-5-19.xlsx") %>% 
+  clean_names() %>% 
+  rename("rfid" = "sample_name",
+         "nanodrop_ng_u_l" = "new_conc_ng_u_l",
+         "x260_280" = "x260_280_19" ,
+         "x260_230" = "x260_230_20") %>% # using the second time nanodrop
+  mutate(user_id = "HVB",  
+         date = "2019-12-05",
+         comments = "Imported from nanodrop zebrafish results 12-5-19 file") %>% 
+  subset(!is.na(rfid))
+
+
+# check for dupes before joining to zebrafish and project names
 khai_tissueextraction_df %>% get_dupes(rfid)
+
+## join to sample_metadata instead 
+khai_tissueextraction_df %>% 
+  left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
+  select(transponder, sample_id_barcode, rfid, project_name) %>% naniar::vis_miss()
+
+khai_tissueextraction_df_join <- khai_tissueextraction_df %>% bind_rows(ucsf_zebrafish %>% 
+                                                                          select(rfid, well, nanodrop_ng_u_l, x260_280, x260_230, user_id, date, comments) %>% 
+                                                                          mutate_all(as.character)) %>% 
+  left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
+  left_join(., tissue_df[, c("rfid", "project_name")], by = "rfid") %>% # to account for the naive animals
+  mutate(project_name = coalesce(project_name.y, project_name.x)) %>% 
+  select(-matches("project_name[.][xy]")) %>% 
+  # subset(!(grepl("^000")&nchar(rfid) == 10)) ## XX temporarily remove these bc no metadata
+  subset(dna_plate_code != "RiptideControl") %>%
+  subset(!is.na(project_name)) %>% ## XX temporary until zebrafish get sorted out 
+  distinct()
+  #   
+#   select(transponder, sample_id_barcode, rfid, project_name) %>% 
+#   select(rfid) %>% View()
 
 
 # separate the joining to prevent needing to compile all shipment data from other u01s and p50 to generate project specific data
-khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
-  left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
-  left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
-  mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
-         u01 = replace(u01, grepl("Coc", experiment)&!grepl("Co", u01), "Olivier_Oxy"),
-         u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
-  rowwise() %>% 
-  mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
-  select(-c("u01", "experiment")) %>% 
-  left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
-  left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
-  ungroup() %>% 
-  mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)")) %>% 
-  mutate(
-    project_name = case_when(
-      grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
-      grepl("Plate", rfid) ~ "r01_su_guo",
-      grepl("Plate", dna_plate_code) ~ "r01_su_guo",
-      grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
-      grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
-      grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-      grepl("Jhou", u01) ~ "u01_tom_jhou",
-      grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
-      grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
-      grepl("Chen", p50) ~ "p50_hao_chen",
-      grepl("Richards", p50) ~ "p50_jerry_richards",
-      grepl("Meyer", p50) ~ "p50_paul_meyer",
-      TRUE ~ "NA"
-    )
-  )
+# khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
+#   left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
+#   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
+#   mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
+#          u01 = replace(u01, grepl("Coc", experiment)&!grepl("Co", u01), "Olivier_Oxy"),
+#          u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
+#   rowwise() %>% 
+#   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
+#   select(-c("u01", "experiment")) %>% 
+#   left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
+#   left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
+#   ungroup() %>% 
+#   mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)")) %>% 
+#   mutate(
+#     project_name = case_when(
+#       grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
+#       grepl("Plate", rfid) ~ "r01_su_guo",
+#       grepl("Plate", dna_plate_code) ~ "r01_su_guo",
+#       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+#       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+#       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+#       grepl("Jhou", u01) ~ "u01_tom_jhou",
+#       grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+#       grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
+#       grepl("Chen", p50) ~ "p50_hao_chen",
+#       grepl("Richards", p50) ~ "p50_jerry_richards",
+#       grepl("Meyer", p50) ~ "p50_paul_meyer",
+#       TRUE ~ "NA"
+#     )
+#   )
 
 ## CREATE LIBRARY, PROJECT_NAME FOR SEQUENCING RUN
 library_project_name <- khai_tissueextraction_df_join %>% 
@@ -99,7 +141,12 @@ library_project_name <- khai_tissueextraction_df_join %>%
 extraction_log <- khai_tissueextraction_df_join %>%
   select_if(~sum(!is.na(.)) > 0) %>% 
   select(-matches("x(1[89])|x20|u01|p50"))
-  
+
+
+## create csv/sql file/upload + copy to pgadmin  
+setwd("~/Desktop/Database/csv files")
+write.csv(extraction_log, file = "extraction_log.csv", row.names = F)
+
 
 
 
