@@ -80,11 +80,11 @@ sample_metadata <- combined %>%
   # mutate(comments = replace(comments, n == 2, "Scrub")) %>% 
   select(rfid, sex, coatcolor, project_name, organism, strain, comments) 
   
-write.csv(sample_metadata, file = "sample_metadata.csv", row.names = F)
+# write.csv(sample_metadata, file = "sample_metadata.csv", row.names = F)
 
 
 ## exception for getting data from genotyping file 
-flowcell_df %>% 
+seq01_fish <- flowcell_df %>% 
   mutate(rfid = coalesce(rfid, sample_id)) %>% 
   left_join(sample_metadata[, c("rfid", "project_name")], by ="rfid") %>% 
   mutate(library = gsub("Riptide-", "Riptide", library)) %>% subset(is.na(project_name)&library=='UMich8_Fish') %>% 
@@ -95,9 +95,19 @@ flowcell_df %>%
          project_name = "r01_su_guo", 
          organism = NA, 
          strain = "Ekkwill fish") %>% 
-  select(rfid, sex, coatcolor, project_name, organism, strain, comments) %>% 
-  write.csv(file = "no_phenotype_fish_sample_metadata.csv", row.names = F)
+  select(rfid, sex, coatcolor, project_name, organism, strain, comments) 
 
+genotyping_fish_uniform_ids <- seq01_fish %>% 
+  select(rfid) %>% 
+  mutate(rfid_genotyping = gsub("[ -]", "_", rfid)) 
+
+
+# %>% 
+# write.csv(file = "no_phenotype_fish_sample_metadata.csv", row.names = F)
+# seq01_fish %>% write.csv(file = "no_phenotype_fish_sample_metadata_fixrfid.csv", row.names = F) # don't change the original rfid's assigned by the center
+
+
+sample_metadata <- rbind(sample_metadata, seq01_fish)
 
 # dbExecute(con, "CREATE TABLE sample_tracking.sample_metadata (
 # 	rfid VARCHAR(19) NOT NULL, 

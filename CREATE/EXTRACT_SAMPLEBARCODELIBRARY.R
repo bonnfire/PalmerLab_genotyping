@@ -78,11 +78,13 @@ flowcell_df_fordb <- flowcell_df_fordb %>%
   ungroup() %>% 
   left_join(sample_metadata[, c("rfid", "project_name")], by ="rfid") %>% 
   mutate(project_name = coalesce(project_name.y, project_name.x)) %>% 
-  select(-matches("project_name[.][xy]")) %>%
-  subset(!is.na(project_name)) ## XX TEMPORARY excludes the pilot fish
+  select(-matches("project_name[.][xy]")) 
+
+# %>%
+  # subset(!is.na(project_name)) ## XX TEMPORARY excludes the pilot fish
   
 
-
+  
 
   
 ## CREATE SAMPLE BARCODE LIBRARY TABLE

@@ -69,7 +69,15 @@ sequencing_run_log <- sequencing_run_log_IGM_df %>%
   mutate(sequencing_facility_name = "IGM") %>%  # placeholder XX 07/23/2020
   naniar::replace_with_na_all(~.x %in% c("", "\"\"", "NA", "N/A")) %>% 
   subset(!is.na(project_name)) %>% 
-  subset(library_name != "zebrafish")
+  subset(library_name != "zebrafish") ## XX temporary, waiting for oksana to update me about the zebrafish names
+
+sequencing_run_log %>% get_dupes(date_samples_submitted, library_name, project_name)
+
+setwd("~/Desktop/Database/csv files/sample_tracking")
+write.csv(sequencing_run_log, "sequencing_run_log.csv", row.names = F)
+
+
+
 
 ## upload into the dropbox 
 drv <- dbDriver("PostgreSQL")
