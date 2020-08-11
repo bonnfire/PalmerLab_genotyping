@@ -90,9 +90,9 @@ flowcell_df_fordb <- flowcell_df_fordb %>%
 ## CREATE SAMPLE BARCODE LIBRARY TABLE
 sample_barcode_lib <- flowcell_df_fordb %>% 
   rename("comments" = "comment") %>% 
-  select(rfid, project_name, barcode, library, comments, flag) 
+  select(rfid, project_name, pcr_barcode, barcode, library, comments, flag) 
   
-
+setwd("~/Desktop/Database/csv files/sample_tracking") ## hopefully temp, until we can connect to dropbox
 write.csv(sample_barcode_lib, file = "sample_barcode_lib.csv", row.names = F)
 
 
