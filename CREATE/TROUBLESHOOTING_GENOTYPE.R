@@ -24,6 +24,17 @@ sample_barcode_lib %>%
   subset(!grepl("UMich", library)) %>% 
   subset(rfid %in% genotyping_df2$rfid) %>% 
   distinct() %>% 
-  left_join(fastq_seq_01_filenames, by = c("full_run_id" = "runid",
-                                           "pcr_barcode" = "plate")) %>% 
-  dim
+  mutate(pcr_barcode = as.character(pcr_barcode)) %>% 
+  left_join(fastq_seq_01_filenames %>% 
+              subset(grepl("R1", filename)) %>% # 08/12/2020 limit to just R1 for now
+              mutate(library = str_extract(filename, "Riptide\\d+"),
+                     plate = as.character(plate)) %>% 
+              mutate(plate = coalesce(plate, library)) %>% 
+              select(-library), 
+            by = c("full_run_id" = "runid")) %>% 
+  subset(pcr_barcode == plate | library == plate) %>% 
+  select(-plate) %>% 
+  read.csv("fastq_seq_01_filenames.csv")
+                   # ,
+                   # "pcr_barcode" = "plate")) %>% 
+  # naniar::vis_miss()
