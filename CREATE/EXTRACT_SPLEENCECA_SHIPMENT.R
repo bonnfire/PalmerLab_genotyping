@@ -64,8 +64,8 @@ jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>%
 jhou_tissue_shipments_df %>% get_dupes(rfid) 
 
 # remove unwanted columns
-jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
-  select(-matches("labanimalid|sex"))
+# jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
+#   select(-matches("labanimalid|sex"))
   
 # after rfid is fixed, fix format to get tissue type column
 jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>% 
@@ -79,6 +79,10 @@ jhou_tissue_shipments_df <- jhou_tissue_shipments_df %>%
   rename("comments"="notes") %>% 
   select(rfid, tissue_type, tissue_type, shipping_box, comments) 
 
+
+anti_join(extraction_log %>% subset(grepl("jhou", project_name)), 
+          jhou_tissue_shipments_df %>% subset(tissue_type == "spleen"), by = "rfid") %>% 
+  select(rfid) %>% write.csv(file = "missing_jhou_tissue_shipinfo_n67.csv", row.names = F)
 ## all of jhou spleen shipments
 
 
@@ -305,7 +309,7 @@ jerry_shipments_df <- jerry_shipments %>%
   select(matches("rfid|date|box")) %>% 
   gather(tissue, shipping_box, cecum_box:baculum_box) %>% 
   mutate(tissue_type = gsub("_box", "", tissue))
-
+  
 
 #################################################
 ###### ALL SPLEENS DELIVERED FOR EXTRACTION #####

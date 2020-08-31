@@ -34,7 +34,7 @@ sample_barcode_lib %>%
             by = c("full_run_id" = "runid")) %>% 
   subset(pcr_barcode == plate | library == plate) %>% 
   select(-plate) %>% 
-  read.csv("fastq_seq_01_filenames.csv")
+  # read.csv("fastq_seq_01_filenames.csv") ## haven't run yet 08/12/2020 ; should this be another name 
                    # ,
                    # "pcr_barcode" = "plate")) %>% 
   # naniar::vis_miss()

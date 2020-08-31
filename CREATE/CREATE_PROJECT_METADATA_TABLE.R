@@ -10,6 +10,11 @@ project_metadata <- data.frame(project_name = unique(sample_metadata$project_nam
          comments = NA) %>% 
   mutate(phenotypic_data = replace(phenotypic_data, project_name != "pcal_brian_trainor","yes"),
          phenotypic_data = replace(phenotypic_data, project_name == "pcal_brian_trainor","no"))
+## XX update this in the pgadmin
+# "u01_francesca_telese_scrna" update project_name
+#  project_title = SINGLE-CELL RESOLUTION ANALYSIS OF CHROMATIN ACCESSIBILITY AND GENE EXPRESSION CHANGES IN A MODEL OF DRUG ADDICTION
+
+
 
 ## upload into the dropbox 
 drv <- dbDriver("PostgreSQL")
