@@ -26,7 +26,12 @@ sample_barcode_lib %>%
   distinct() %>% 
   mutate(pcr_barcode = as.character(pcr_barcode)) %>% 
   left_join(fastq_seq_01_filenames %>% 
-              subset(grepl("R1", filename)) %>% # 08/12/2020 limit to just R1 for now
+              mutate(Rnum = str_extract(filename, "R\\d"), file = gsub("R\\d", "", filename)) %>% 
+              select(-filename) %>% 
+              mutate(runid = paste0(runid, ";", file)) %>% spread(Rnum, file) %>% 
+              separate(runid, c("runid", "file"), ";") %>% 
+              select(-file) %>% mutate(R1 = gsub("__", "_R1_", R1), R2 = gsub("__", "_R2", R2)) %>% mutate(files = paste0(R1, ";", R2)) %>% 
+              select(-c("R1", "R2")) %>% # 08/31/2020 both R1 and R2
               mutate(library = str_extract(filename, "Riptide\\d+"),
                      plate = as.character(plate)) %>% 
               mutate(plate = coalesce(plate, library)) %>% 
@@ -38,3 +43,5 @@ sample_barcode_lib %>%
                    # ,
                    # "pcr_barcode" = "plate")) %>% 
   # naniar::vis_miss()
+  
+  
