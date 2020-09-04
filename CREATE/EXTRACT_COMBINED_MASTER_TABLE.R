@@ -109,30 +109,15 @@ genotyping_fish_uniform_ids <- seq01_fish %>%
 
 sample_metadata <- rbind(sample_metadata, seq01_fish)
 
-# dbExecute(con, "CREATE TABLE sample_tracking.sample_metadata (
-# 	rfid VARCHAR(19) NOT NULL, 
-# 	sex VARCHAR(4), 
-# 	coatcolor VARCHAR(9), 
-# 	project_name VARCHAR(28) NOT NULL, 
-# 	organism VARCHAR(9) NOT NULL, 
-# 	strain VARCHAR(32), 
-# 	comments VARCHAR(5),
-# CONSTRAINT sample_metadata_pk PRIMARY KEY(rfid)
-# );")
+## updates after 09/04/2020
+# Jerry shipment 03
+setwd("/home/bonnie/Desktop/Database/csv files/p50_jerry_richards_2020")
+shipments_p50_df %>% subset(p50 == "Richards"&cohort == "C03") %>%
+  mutate_all(~gsub(" ", "", .)) %>%  # remove all spaces for better joining (Library # -> Library#)
+  mutate(project_name = "p50_jerry_richards_2020",
+         organism = NA, 
+         strain = NA, 
+         comments = NA) %>% select(rfid, sex, coatcolor, project_name, organism, strain, comments) %>% write.csv("c03_samptrack_sampmetadata.csv", row.names = F)
+## Jerry shipment 03.5?? 
 
-
-
-## upload the pgdump file into the db
-
-con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
-dbWriteTable(con, c("sample_tracking","sample_metadata"), value = sample_metadata, row.names = FALSE, overwrite = T)
-dbExecute(con,"ALTER TABLE sample_tracking.sample_metadata ADD CONSTRAINT rfid_unique UNIQUE(rfid)")
-
-# disconnect
-dbDisconnect(con)
-
-## in terminal
-cd /tmp
-sudo su postgres
-pg_dump -d PalmerLab_Datasets -t sample_tracking.sample_metadata > sample_metadata.sql
-exit
+## xx Jhou shipment 16

@@ -13,6 +13,7 @@ sample_barcode_lib %>%
 ## create object in tscc, in projects/ps-palmer/sequencing_data/
 # fastq_seq01_filenames <- data.frame(filename = c(list.files(path = "200221_A00953_0069_BH5T5LDSXY", full.names=T),  
 # list.files(path = "200326_A00953_0086_BHC2FMDSXY", full.names = T)))
+
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
 fastq_seq_01_filenames <- read.csv("fastq_seq_01_filenames.csv") %>% 
   separate(filename, into = c("runid", "filename"), sep = "/") %>% 
@@ -30,16 +31,16 @@ sample_barcode_lib %>%
               select(-filename) %>% 
               mutate(runid = paste0(runid, ";", file)) %>% spread(Rnum, file) %>% 
               separate(runid, c("runid", "file"), ";") %>% 
-              select(-file) %>% mutate(R1 = gsub("__", "_R1_", R1), R2 = gsub("__", "_R2", R2)) %>% mutate(files = paste0(R1, ";", R2)) %>% 
+              select(-file) %>% mutate(R1 = gsub("__", "_R1_", R1), R2 = gsub("__", "_R2_", R2)) %>% mutate(files = paste0(R1, ";", R2)) %>% 
               select(-c("R1", "R2")) %>% # 08/31/2020 both R1 and R2
-              mutate(library = str_extract(filename, "Riptide\\d+"),
+              mutate(library = str_extract(files, "Riptide\\d+"),
                      plate = as.character(plate)) %>% 
               mutate(plate = coalesce(plate, library)) %>% 
               select(-library), 
             by = c("full_run_id" = "runid")) %>% 
   subset(pcr_barcode == plate | library == plate) %>% 
   select(-plate) %>% 
-  # read.csv("fastq_seq_01_filenames.csv") ## haven't run yet 08/12/2020 ; should this be another name 
+  # read.csv("sample_sheet_n672.csv", row.names = F) ## haven't run yet 08/12/2020 ; should this be another name 
                    # ,
                    # "pcr_barcode" = "plate")) %>% 
   # naniar::vis_miss()
