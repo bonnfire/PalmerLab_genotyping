@@ -148,6 +148,16 @@ setwd("~/Desktop/Database/csv files")
 write.csv(extraction_log, file = "extraction_log.csv", row.names = F)
 
 
+## XX 
+## get the constraint columns from the db into table
+## DBI::
+## subset filter out the id's that already exist and have a library
+## create new csv file
+## basic qc -- no dupes and dim, no missing values in not null columns, check anti join bw table and sample metadata (check for typos)
+## copy csv into the db
+
+
+## XX add the constraints from the contraints document into the db
 
 
 # khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
