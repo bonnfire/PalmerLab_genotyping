@@ -10,7 +10,8 @@
 ################################# 
 
 # get rid of the Riptide filter to see the UMich data
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
+# setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files")
 flowcell_files <- list.files(path = ".", pattern = "^\\d{4}-\\d{2}-\\d{2}-Flowcell Sample-Barcode list.*[^)].xlsx")
 
 u01.importxlsx <- function(xlname){
@@ -32,8 +33,8 @@ flowcell_df <- flowcell %>% rbindlist(idcol = "filename", fill = T, use.names = 
   select(-c("x7", "comments_8", "comments_9", "flow_cell_lane")) %>%  # columns that only contain NA or have been coalesced
   # dplyr::filter(grepl("Riptide", library)) %>% 
   mutate(comment = toupper(comment)) %>% 
-  mutate(rfid = ifelse(grepl("^\\d{9}$", sample_id),
-                       paste0("933000", sample_id), sample_id_demul))  # create a column for rfid if it doesn't already exist
+  mutate(rfid = ifelse(grepl("^\\d{9}$", sample_id), paste0("933000", sample_id),
+                       ifelse(grepl("\\d{15}", sample_id), sample_id, sample_id_demul)))  # create a column for rfid if it doesn't already exist
 
 flowcell_df %>% mutate_at(vars(one_of("library")), as.factor) %>% summary()
 flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
@@ -136,32 +137,4 @@ drop_search(query = "Flowcell", path = "https://www.dropbox.com/work/Palmer%20La
 
 
 
-
-#### SENT TO SEQUENCING CORE
-## 06/09/2020
-## XX fix project names before uploading the sheets in the database
-
-
-
-extractions_flowcell <- extractions_khai_df %>% 
-  subset(`sampleid_barcode` %in% flow_cell_original_rip$`Sample ID`) # 288
-
-## create this table for rsm
-text(barplot(table(extractions_flowcell$u01), beside = T), 0, table(extractions_flowcell$u01))
-table(extractions_flowcell$u01, extractions_flowcell$userid)
-
-# using origin will get you the wrong cohorts?
-
-extractions_flowcell$u01 %>% table() 
-extractions_flowcell$u01_rfid_verified %>% table() 
-
-# extractions_flowcell$origin %>% table()
-
-olivier_spleen_list_df %>% subset(rfid %in% extractions_flowcell[which(extractions_flowcell$comments == "mismatch"),]$transponder)
-extractions_flowcell[which(extractions_flowcell$comments == "mismatch"),]
-extractions_flowcell %>% subset(comments == "mismatch")
-# searching for duplicate entries in the sampleid barcode column FALSE FOR BOTH extractions_flowcell %>% select(transponder AND sampleid_barcode) %>% duplicated() %>% any() 
-agrep("933000120117342", extractions_flowcell$transponder, value = T)
-"933000120138331"
-"933000120138561"
 

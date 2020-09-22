@@ -20,7 +20,7 @@ khai_tissueextractionNames <- googlesheets4::sheet_names(
   ) #extract the id code associated with the U01 Spleen&Fish Extraction Database 
 
 khai_tissueextraction <- lapply(khai_tissueextractionNames, function(x){             
-  googlesheets4::range_read(googlesheets4::gs4_find()$id[1],sheet = x) 
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
 }) # extract all sheets in this workbook
 
 
