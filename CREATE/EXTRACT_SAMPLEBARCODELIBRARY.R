@@ -72,7 +72,8 @@ sample_barcode_lib <- flowcell_df_fordb %>%
   rename("comments" = "comment") %>% 
   select(rfid, project_name, barcode, library, comments)
 
-
+## XX flowcell_df_fordb %>% mutate(project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo"), project_name = replace(project_name, grepl("^000|7", rfid)&is.na(project_name), "riptide_control"), project_name = replace(project_name, grepl("Kalivas", u01), "u01_peter_kalivas_us")) %>% select(filename, project_name) %>% table(exclude = NULL) 
+## PICK UP HERE -- 09/22/2020
 
 
 
