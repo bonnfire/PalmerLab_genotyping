@@ -42,15 +42,29 @@ flowcell_df %>% subset(!is.na(sample_id_demul)) %>% get_dupes(sample_id_demul)
 # check for dupes
 flowcell_df %>% get_dupes(rfid)
 
-# fix dupes
-flowcell_df <- flowcell_df %>% 
+# fix dupes and wrong rfid
+flowcell_df <- flowcell_df %>%
+  select(-comments) %>% 
+  mutate(flag = "NA") %>% 
   mutate(comment = ifelse(rfid == "933000120138361"&library=="Riptide-01", "dupe ID fixed 07/23/2020", comment), 
-    rfid = replace(rfid, rfid == "933000120138361"&library=="Riptide-01", "933000120138561"))
+    rfid = replace(rfid, rfid == "933000120138361"&library=="Riptide-01", "933000120138561"),
+    
+    comment = ifelse(rfid == "933000120157342"&library=="Riptide-01", "Original RFID was 933000120157342", comment),
+    rfid = replace(rfid, rfid == "933000120157342"&library=="Riptide-01", "933000120117342"),
+    flag = replace(flag, rfid == "933000120117342", "Suspect RFID"), 
+    
+    comment = ifelse(rfid == "933000320046825"&library=="Riptide-06", "Original RFID was 933000320046825", comment),
+    rfid = replace(rfid, rfid == "933000320046825"&library=="Riptide-06", "933000320045825"),
+    flag = replace(flag, rfid == "933000320045825", "Suspect RFID"), 
+    
+    comment = ifelse(rfid == "933000520138331"&library=="Riptide-01", "Original RFID was 933000520138331", comment),
+    rfid = replace(rfid, rfid == "933000520138331"&library=="Riptide-01", "933000120138331"),
+    flag = replace(flag, rfid == "933000120138331", "Suspect RFID"))
 
 # post fix check for dupes 
 flowcell_df %>% get_dupes(rfid)
 
-## assign project_name 
+## assign project_name and fix library contents
 flowcell_df_fordb <- flowcell_df %>% 
   left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the animals for which we have shipment info for 
   mutate(
@@ -61,16 +75,24 @@ flowcell_df_fordb <- flowcell_df %>%
       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-      grepl("Jhou", u01) ~ "u01_tom_jhou")
+      grepl("Jhou", u01) ~ "u01_tom_jhou",
+      grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+      grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy")
     ) %>%  # for the animals for which we don't have shipment info for 
-  mutate(rfid = coalesce(rfid, sample_id))
-  # select(-one_of("u01")) %>% 
-  # rename("rfid" = "sample_id_demul") 
+  mutate(rfid = coalesce(rfid, sample_id)) %>% 
+  rowwise() %>% 
+  mutate(library = gsub("-", "", library),
+         library = replace(library, grepl("UMich", library), gsub("(\\d)", "0\\1", library))) %>% 
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("_", "-", rfid))),
+         rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", rfid))),
+         project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% # fix the plate names for zebrafish
+  ungroup()  
   
 ## CREATE SAMPLE BARCODE LIBRARY TABLE
 sample_barcode_lib <- flowcell_df_fordb %>% 
-  rename("comments" = "comment") %>% 
-  select(rfid, project_name, barcode, library, comments)
+  rename("comments" = "comment",
+         "library_name" = "library") %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
 
 ## XX flowcell_df_fordb %>% mutate(project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo"), project_name = replace(project_name, grepl("^000|7", rfid)&is.na(project_name), "riptide_control"), project_name = replace(project_name, grepl("Kalivas", u01), "u01_peter_kalivas_us")) %>% select(filename, project_name) %>% table(exclude = NULL) 
 ## PICK UP HERE -- 09/22/2020
