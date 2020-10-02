@@ -53,8 +53,8 @@ flowcell_df <- flowcell_df %>%
     rfid = replace(rfid, rfid == "933000120157342"&library=="Riptide-01", "933000120117342"),
     flag = replace(flag, rfid == "933000120117342", "Suspect RFID"), 
     
-    comment = ifelse(rfid == "933000320046825"&library=="Riptide-06", "Original RFID was 933000320046825", comment),
-    rfid = replace(rfid, rfid == "933000320046825"&library=="Riptide-06", "933000320045825"),
+    comment = ifelse(rfid == "933000320046825"&library=="Riptide06", "Original RFID was 933000320046825", comment),
+    rfid = replace(rfid, rfid == "933000320046825"&library=="Riptide06", "933000320045825"),
     flag = replace(flag, rfid == "933000320045825", "Suspect RFID"), 
     
     comment = ifelse(rfid == "933000520138331"&library=="Riptide-01", "Original RFID was 933000520138331", comment),
@@ -66,7 +66,7 @@ flowcell_df %>% get_dupes(rfid)
 
 ## assign project_name and fix library contents
 flowcell_df_fordb <- flowcell_df %>% 
-  left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the animals for which we have shipment info for 
+  left_join(., shipments_df[, c("rfid", "u01")], by = "rfid") %>%   # for the U01 animals for which we have shipment info for 
   mutate(
     project_name = case_when(
       grepl("umich", library, ignore.case = T) ~ "u01_huda_akil",
@@ -82,22 +82,55 @@ flowcell_df_fordb <- flowcell_df %>%
   mutate(rfid = coalesce(rfid, sample_id)) %>% 
   rowwise() %>% 
   mutate(library = gsub("-", "", library),
-         library = replace(library, grepl("UMich", library), gsub("(\\d)", "0\\1", library))) %>% 
+         library = replace(library, grepl("UMich", library), gsub("(\\d)", "0\\1", library)),
+         library = replace(library, library == "UMich02redo", "UMich02")) %>% 
   mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("_", "-", rfid))),
          rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", rfid))),
-         project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% # fix the plate names for zebrafish
+         project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% # fix the rfids for zebrafish
+  mutate(project_name = replace(project_name, is.na(project_name)&library == "Riptide15", "p50_jerry_richards_2020")) %>% 
+  mutate(comment = ifelse(rfid == "933000320046810"&library=="Riptide06", "Original RFID was 933000320046810", comment),
+         rfid = replace(rfid, rfid == "933000320046810"&library=="Riptide06", "933000320045810"),
+         flag = replace(flag, rfid == "933000320045810", "Suspect RFID"),
+         project_name = replace(project_name, rfid == "933000320045810", "u01_tom_jhou")) %>% # issue resolved with Khai on 09/23/2020
   ungroup()  
-  
+
 ## CREATE SAMPLE BARCODE LIBRARY TABLE
 sample_barcode_lib <- flowcell_df_fordb %>% 
   rename("comments" = "comment",
          "library_name" = "library") %>% 
-  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, rfid == "789970", "00078997E1"),
+         rfid = replace(rfid, library_name=="Riptide30"&grepl("^7899.*", rfid), str_pad(rfid, 10, "left", "0")),
+         project_name = replace(project_name, library_name == "Riptide30", "p50_hao_chen_2014")) %>% 
+  ungroup()
+
+
+## copy as csv file 
+setwd("~/Desktop/Database/csv files/sample_tracking")
+write.csv(sample_barcode_lib, file = "sample_barcode_lib_wfilenames.csv", row.names = F)
 
 ## XX flowcell_df_fordb %>% mutate(project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo"), project_name = replace(project_name, grepl("^000|7", rfid)&is.na(project_name), "riptide_control"), project_name = replace(project_name, grepl("Kalivas", u01), "u01_peter_kalivas_us")) %>% select(filename, project_name) %>% table(exclude = NULL) 
 ## PICK UP HERE -- 09/22/2020
 
+data.frame(filename = "R11_S1_L003_R1_001.fastq.gz") %>% 
+  mutate(library = gsub("(R\\d+)_.*", "\\1", filename),
+         pcr_barcode = gsub("_(S\\d+)_.*", "\\1", filename))
 
+
+data.frame(fastq_filename = c("R11_S1_L003_R1_001.fastq.gz", "R11_S1_L003_R2_001.fastq.gz")) %>% 
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), file = gsub("_(R\\d)_", "__", fastq_filename)) %>% distinct(runid, file) %>% mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file)))
+
+# kn02 csv 
+read.csv("fastq_seq02_filenames.csv") %>%
+  separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+         file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+  distinct(runid, file) %>% 
+  mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% subset(grepl("^R([12][1-9]|30)", file)) %>% 
+  mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
+         pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+  select(-file) %>% right_join(sample_barcode_lib %>% subset(grepl("KN02", filename)),  by = c("library_name", "pcr_barcode")) %>% mutate(organism = ifelse(!grepl("guo", project_name), "rat", "zebrafish"), strain = ifelse(organism != "zebrafish", "Heterogenous stock", "Ekkwill fish")) %>% write.csv("kn02_fastq_sample_metadata_n960.csv", row.names = F)
 
 
 ## upload the pgdump file into the db
