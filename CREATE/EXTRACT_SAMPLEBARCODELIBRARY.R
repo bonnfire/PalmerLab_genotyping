@@ -122,6 +122,7 @@ data.frame(fastq_filename = c("R11_S1_L003_R1_001.fastq.gz", "R11_S1_L003_R2_001
   mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), file = gsub("_(R\\d)_", "__", fastq_filename)) %>% distinct(runid, file) %>% mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file)))
 
 # kn02 csv 
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
 read.csv("fastq_seq02_filenames.csv") %>%
   separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
   mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
@@ -130,7 +131,10 @@ read.csv("fastq_seq02_filenames.csv") %>%
   mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% subset(grepl("^R([12][1-9]|30)", file)) %>% 
   mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
          pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
-  select(-file) %>% right_join(sample_barcode_lib %>% subset(grepl("KN02", filename)),  by = c("library_name", "pcr_barcode")) %>% mutate(organism = ifelse(!grepl("guo", project_name), "rat", "zebrafish"), strain = ifelse(organism != "zebrafish", "Heterogenous stock", "Ekkwill fish")) %>% write.csv("kn02_fastq_sample_metadata_n960.csv", row.names = F)
+  select(-file) %>% right_join(sample_barcode_lib %>% subset(grepl("KN02", filename)),  by = c("library_name", "pcr_barcode")) %>% 
+  mutate(organism = ifelse(!grepl("guo", project_name), "rat", "zebrafish"), strain = ifelse(organism != "zebrafish", "Heterogenous stock", "Ekkwill fish")) %>% 
+  mutate(rfid = gsub(" ", "", rfid)) %>% 
+  write.csv("kn02_fastq_sample_metadata_n960.csv", row.names = F)
 
 
 ## upload the pgdump file into the db
