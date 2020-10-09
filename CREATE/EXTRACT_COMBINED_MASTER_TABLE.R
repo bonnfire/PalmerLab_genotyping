@@ -121,3 +121,10 @@ shipments_p50_df %>% subset(p50 == "Richards"&cohort == "C03") %>%
 ## Jerry shipment 03.5?? 
 
 ## xx Jhou shipment 16
+
+
+
+## XX add zebrafish breeders
+read_excel("Families_zebrafish_20200821 reformatted.xlsx") %>% 
+  clean_names() %>% 
+  mutate_all(as.character) %>% mutate(breeder_id = paste0(mother, ",", father)) %>% select(breeder_id) %>% separate_rows(1, sep = ",") %>% mutate(join = "in pedigree")

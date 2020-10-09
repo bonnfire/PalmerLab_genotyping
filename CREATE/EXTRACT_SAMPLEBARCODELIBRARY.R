@@ -113,14 +113,6 @@ write.csv(sample_barcode_lib, file = "sample_barcode_lib_wfilenames.csv", row.na
 ## XX flowcell_df_fordb %>% mutate(project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo"), project_name = replace(project_name, grepl("^000|7", rfid)&is.na(project_name), "riptide_control"), project_name = replace(project_name, grepl("Kalivas", u01), "u01_peter_kalivas_us")) %>% select(filename, project_name) %>% table(exclude = NULL) 
 ## PICK UP HERE -- 09/22/2020
 
-data.frame(filename = "R11_S1_L003_R1_001.fastq.gz") %>% 
-  mutate(library = gsub("(R\\d+)_.*", "\\1", filename),
-         pcr_barcode = gsub("_(S\\d+)_.*", "\\1", filename))
-
-
-data.frame(fastq_filename = c("R11_S1_L003_R1_001.fastq.gz", "R11_S1_L003_R2_001.fastq.gz")) %>% 
-  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), file = gsub("_(R\\d)_", "__", fastq_filename)) %>% distinct(runid, file) %>% mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file)))
-
 # kn02 csv 
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE")
 read.csv("fastq_seq02_filenames.csv") %>%
@@ -135,6 +127,38 @@ read.csv("fastq_seq02_filenames.csv") %>%
   mutate(organism = ifelse(!grepl("guo", project_name), "rat", "zebrafish"), strain = ifelse(organism != "zebrafish", "Heterogenous stock", "Ekkwill fish")) %>% 
   mutate(rfid = gsub(" ", "", rfid)) %>% 
   write.csv("kn02_fastq_sample_metadata_n960.csv", row.names = F)
+
+
+
+## add fish breeders (after removing Riptide18 from db)
+sample_barcode_lib <- sample_barcode_lib %>% 
+  rfid 
+
+fish_breeders <- read_excel("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/Updated Fish Breeders2020-08-10-Flowcell Sample-Barcode list (KN03 Pool) .xlsx") %>% 
+  clean_names() %>% 
+  mutate_all(as.character) %>%
+  rename("library_name" = "library",
+         "rfid" = "sample_id") %>% 
+  subset(library_name == "Fish Breeders") %>% 
+  mutate(project_name = "r01_su_guo",
+         filename = "Updated Fish Breeders2020-08-10-Flowcell Sample-Barcode list (KN03 Pool) .xlsx", 
+         comments = NA, 
+         flag = NA) %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+
+# XX animals that are not in phenotyping center
+# fish_breeders %>% left_join(read_excel("Families_zebrafish_20200821 reformatted.xlsx") %>% clean_names() %>% mutate_all(as.character) %>% mutate(breeder_id = paste0(mother, ",", father)) %>% select(breeder_id) %>% separate_rows(1, sep = ",") %>% mutate(join = "in pedigree"), by = c("rfid" = "breeder_id")) %>% distinct() %>% subset(is.na(join)) %>% select(rfid) %>% unlist() %>% paste0(collapse = ", ")
+
+fish_breeders %>% write.csv("fish_breeders_library.csv", row.names = F)
+
+
+
+
+
+
+
+
+
 
 
 ## upload the pgdump file into the db
