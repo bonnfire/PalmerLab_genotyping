@@ -125,6 +125,18 @@ shipments_p50_df %>% subset(p50 == "Richards"&cohort == "C03") %>%
 
 
 ## XX add zebrafish breeders
-read_excel("Families_zebrafish_20200821 reformatted.xlsx") %>% 
+read_excel("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/Zebrafish/Families_zebrafish_20200821 reformatted.xlsx") %>% 
   clean_names() %>% 
   mutate_all(as.character) %>% mutate(breeder_id = paste0(mother, ",", father)) %>% select(breeder_id) %>% separate_rows(1, sep = ",") %>% mutate(join = "in pedigree")
+
+## give pedigree for riyan
+setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/Zebrafish")
+read_excel("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/Zebrafish/Families_zebrafish_20200821 reformatted.xlsx") %>% 
+  clean_names() %>% 
+  mutate_all(as.character) %>% 
+  mutate(fish_id = replace(fish_id, grepl("Plate", fish_id), paste0(gsub("-", "_", fish_id))),
+         fish_id = replace(fish_id, grepl("Plate", fish_id), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", fish_id)))) %>% 
+  write.xlsx("Families_zebrafish_20200821_reformatted_changedids.xlsx")
+
+## get the p50 controls 
+read.xlsx("Riptide_control_96.xlsx") %>% mutate_all(as.character)

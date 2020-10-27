@@ -52,8 +52,11 @@ khai_tissueextraction_df <- khai_tissueextraction %>%
          rfid = gsub(" ", "", rfid),
          rfid = gsub("20200617Plate", "20200616Plate", rfid)
   ) %>% ###
-  mutate(rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid), gsub("_", "", rfid)),
-         riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("_", "-", rfid))),
+         rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", rfid)))) %>% 
+         # project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% 
+  # mutate(rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid), gsub("_", "", rfid)),
+  mutate(riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
   ungroup() %>% 
   distinct() ## XX look into why p50_jerry_richards are multiplied 4x
 
@@ -84,18 +87,22 @@ khai_tissueextraction_df %>%
 khai_tissueextraction_df_join <- khai_tissueextraction_df %>% bind_rows(ucsf_zebrafish %>% 
                                                                           select(rfid, well, nanodrop_ng_u_l, x260_280, x260_230, user_id, date, comments) %>% 
                                                                           mutate_all(as.character)) %>% 
-  left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
+  # left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_metadata_rfidproject_10192020.csv") %>% mutate_all(as.character), by = "rfid") %>% 
   left_join(., tissue_df[, c("rfid", "project_name")], by = "rfid") %>% # to account for the naive animals
   mutate(project_name = coalesce(project_name.y, project_name.x)) %>% 
   select(-matches("project_name[.][xy]")) %>% 
   # subset(!(grepl("^000")&nchar(rfid) == 10)) ## XX temporarily remove these bc no metadata
-  subset(dna_plate_code != "RiptideControl") %>%
-  subset(!is.na(project_name)) %>% ## XX temporary until zebrafish get sorted out 
+  # subset(dna_plate_code != "RiptideControl") %>%
+  # subset(!is.na(project_name)) %>% ## XX temporary until zebrafish get sorted out 
   distinct()
   #   
 #   select(transponder, sample_id_barcode, rfid, project_name) %>% 
 #   select(rfid) %>% View()
 
+
+## XX re-investigate this after conference 10/19/2020
+khai_tissueextraction_df_join %>% mutate(project_name = replace(project_name, grepl("Plate", rfid)|rfid %in% ucsf_zebrafish$rfid|grepl("^Z26", rfid), "r01_su_guo")) %>% subset(is.na(project_name)) %>% View()
 
 # separate the joining to prevent needing to compile all shipment data from other u01s and p50 to generate project specific data
 # khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
