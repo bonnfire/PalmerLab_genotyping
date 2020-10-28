@@ -1,3 +1,30 @@
+# create sample form for nida conference/retreat (verify database number with pi's)
+nida <- read_excel("~/Downloads/nida_presentation (1).xlsx") %>% 
+  janitor::clean_names() %>% 
+  subset(grepl("u01|p50", project))
+# For the letter
+nida_formletter <- nida %>% 
+  mutate(letter = paste0(project, "\n", "Good afternoon, \n As you know, I am a database specialist in the Palmer lab. In preparation for the upcoming NIDA retreat, I am putting together the summary of how HS rats are progressing. Here is the record that I have for your project. I wanted to double-check with you that the records showing in my database are correct. Please tell me if there are any discrepancies. \n The ", str_extract(project, "p50|u01") %>% toupper(), " grant funded ", funded, " HS rats. We have record of Wake Forest shipping ", wake_forest_shipments, " rats and phenotype data from your lab for ", phenotype_data_shared, " of these, while ", dead_exclude, " died.", "On our end, we have extracted the DNA from the spleens of ", dna_extracted_from_spleens, " and have genotyped ", riptide_sequenced, ". \n Thank you for your time. 
+                         \n Bonnie"))
+
+# troubleshooting mysterious rfid's found in riyan's sample sheet October 2020
+read.csv("pgadmin_kn02_sample_barcodelib.csv") %>% 
+  mutate_all(as.character) %>% subset(library_name == "Riptide30") %>% 
+  anti_join(read.xlsx("Riptide_control_96.xlsx") %>% mutate_all(as.character) %>% select(sample.id, user.id), ., by = c("sample.id"= "rfid"))
+
+khai_riptide30 <-read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/2020-08-06-Flowcell Sample-Barcode list (KN02 Pool) .xlsx") %>% 
+  mutate_all(as.character) %>% janitor::clean_names() %>% rename("rfid" = "sample_id") %>% subset(library == "Riptide30") 
+
+db_riptide30 <- read.csv("pgadmin_kn02_sample_barcodelib.csv") %>% 
+  mutate_all(as.character) %>% subset(library_name == "Riptide30") 
+
+apurva_riptide30 <- read.xlsx("Riptide_control_96.xlsx") %>% mutate_all(as.character) %>% 
+  rename("rfid" = "sample.id")
+
+milad_24 <- read.csv("pedigree_info_24_samples.csv") %>% 
+  mutate_all(as.character)
+
+
 ## troubleshooting for Den 08/07/2020
 
 # Merge the sequencing run log and sample ID barcode tables by library_name
