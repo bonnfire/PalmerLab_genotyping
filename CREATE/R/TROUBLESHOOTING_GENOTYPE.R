@@ -1,5 +1,10 @@
 
 
+## qc metadata for failed concordance checks
+hs_qc_outliers <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/temp/hs_QC_outliers_n28_20201118.csv") %>% 
+  mutate_all(as.character)
+
+
 
 # create sample form for nida conference/retreat (verify database number with pi's)
 nida <- read_excel("~/Downloads/nida_presentation (1).xlsx") %>% 
