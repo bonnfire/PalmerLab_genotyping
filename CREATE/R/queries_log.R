@@ -39,6 +39,8 @@ kn03_idconv %>% subset(library_name == "Fish Breeders") %>%
   mutate(z = ifelse(rfid_z_manifest == rfid_z_guo, "matches", "does not match")) %>% 
   write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/fish_breeder_96_idqc.xlsx")
 
+kn03_idconv %>% subset(library_name == "Fish Breeders") %>% left_join(plates_df_1, by = c("rfid" = "fish_id")) %>% subset(is.na(dna_conc)) %>% select(rfid)
+
 
 ### kn02
 
