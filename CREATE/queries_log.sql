@@ -10,11 +10,13 @@ begin
 		return new;
 	
 	elseif (NEW.rfid like '%Plate%') then
+	-- XX make more robust
 		insert into sample_tracking.sample_metadata_subset(rfid, sex, coatcolor, project_name, organism, strain, comments)
-		values (NEW.rfid, NEW.sex, new.coatcolor, TG_TABLE_SCHEMA, 'zebrafish', 'Ekkwill fish', 'NA');
+		values (NEW.rfid, 'NA', 'NA', TG_TABLE_SCHEMA, 'zebrafish', 'Ekkwill fish', 'NA');
 		return new;
 		
 	elseif (NEW.rfid like '^[[:digit:]]{1,3}$') then
+	-- check in with Apurva about SD rat id's
 		insert into sample_tracking.sample_metadata_subset(rfid, sex, coatcolor, project_name, organism, strain, comments)
 		values (NEW.rfid, NEW.sex, new.coatcolor, TG_TABLE_SCHEMA, 'rat', 'Sprague Dawley', 'NA');
 		return new;
@@ -72,4 +74,22 @@ SELECT * from u01_tom_jhou.wfu_master
 limit 5 offset 10;
 
 select * from u01_tom_jhou.wfu_master_subset
+
+--- example with another organism (zebrafish)
+CREATE TABLE r01_su_guo.master_subset(
+mother varchar(8),
+father varchar(8),
+rfid text not null
+);
+
+insert into r01_su_guo.master_subset
+(mother, father, rfid)
+values ('Z2622-F1', 'Z2622-M1', '20191209-Plate1');
+
+create trigger sample_info_trg_zeb_larvae after insert on r01_su_guo.master_subset
+for each row execute procedure newsample();
+
+insert into r01_su_guo.master_subset
+(mother, father, rfid)
+values ('Z2622-F1', 'Z2622-M1', '20191209-Plate1-1D');
 
