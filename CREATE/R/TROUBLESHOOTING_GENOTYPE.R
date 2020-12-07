@@ -1,3 +1,25 @@
+## "repeat mother and father cases (n=17)"
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  # subset(dames == sires) # three issues 
+  # subset(dames == ) # three issues 
+  # subset(sires == ) # three issues 
+
+unique_dames <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  select(dames) %>% 
+  unlist() %>% 
+  unique()
+
+unique_sires <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  select(sires) %>% 
+  unlist() %>% 
+  unique()  
+
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  subset(dames %in% unique_sires)
 
 
 ## qc metadata for failed concordance checks
