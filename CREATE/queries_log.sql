@@ -1,5 +1,10 @@
 -- !preview conn=DBI::dbConnect(RSQLite::SQLite())
+---------------------------
+-- save workspace for inserting from copy 
 
+
+
+---------------------------
 SELECT 1
 
 create or replace function newsample() returns trigger as $sample_info_trg$
@@ -92,7 +97,7 @@ for each row execute procedure newsample();
 insert into r01_su_guo.master_subset
 (mother, father, rfid)
 values ('Z2622-F1', 'Z2622-M1', '20191209-Plate1-1D');
-
+  
 
 
 

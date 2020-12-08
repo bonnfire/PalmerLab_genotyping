@@ -11,15 +11,58 @@ unique_dames <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Pa
   unlist() %>% 
   unique()
 
+unique_dames_projects <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  distinct(dames, project_name) 
+
 unique_sires <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
   mutate_all(as.character) %>% 
   select(sires) %>% 
   unlist() %>% 
-  unique()  
+  unique()
+
+unique_sires_projects <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  distinct(sires, project_name) 
 
 read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
   mutate_all(as.character) %>% 
   subset(dames %in% unique_sires)
+
+# with cohort 
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>% 
+  subset(dames %in% unique_sires) %>% 
+  distinct(dames, project_name) %>% 
+  left_join(shipments_df[, c("u01", "dames", "cohort")] %>% 
+              mutate(u01 = replace(u01, !is.na(u01), 
+                                   case_when(grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+                                             grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+                                             grepl("Olivier_Scrub", u01) ~ "u01_olivier_george_scrub",
+                                             grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+                                             grepl("Jhou", u01) ~ "u01_tom_jhou",
+                                             grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
+                                             grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+                                             TRUE ~ "NA"))) %>% 
+              rename("u01_dames" = "u01", 
+                     "cohort_dames" = "cohort"), by = c("project_name"="u01_dames", "dames")) %>%  # where they were found as dames
+  rename("u01_dames" = "project_name") %>% 
+  left_join(shipments_df[, c("u01", "sires", "cohort")] %>% 
+              mutate(u01 = replace(u01, !is.na(u01), 
+                                   case_when(grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
+                                             grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
+                                             grepl("Olivier_Scrub", u01) ~ "u01_olivier_george_scrub",
+                                             grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
+                                             grepl("Jhou", u01) ~ "u01_tom_jhou",
+                                             grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
+                                             grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
+                                             TRUE ~ "NA"))) %>% 
+              rename("u01_sires" = "u01", 
+                     "cohort_sires" = "cohort"), by = c("dames" = "sires")) %>% distinct() %>% rename("breeder_id" = "dames") %>% 
+  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/breeder_id_sire_or_dames_n17.xlsx")
+
+shipments_df[, c("u01", "sires", "cohort")] %>% 
+  rename("u01_sires", "sires", "cohort_sires") # where they were found as sires
 
 
 ## qc metadata for failed concordance checks
