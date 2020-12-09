@@ -56,3 +56,16 @@ read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotypi
   left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree.csv") %>% 
               mutate_all(as.character), by = "id") %>% subset(is.na(sex.y)) %>% distinct(id, sex.x) %>% rename("sex" = "sex.x") %>% mutate(sex = replace(sex, sex == "dames", "F"), sex = replace(sex, sex == "sires", "M")) %>% write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/missing_pedigree_id_n12.csv", row.names = F)
 
+# temporarily fixing 
+pedigree_12082020_temp <- pedigree_12082020 %>% 
+  distinct() %>% 
+  mutate(sire_id = replace(sire_id, id_f51 == "73154_1", "72774_3"),
+         sire_id = replace(sire_id, id_f51 == "73192_1", "72905_1"),
+         dam_id = replace(dam_id, id_f51 == "73192_1", "72773_4"),
+         sire_id = replace(sire_id, id_f51 == "73154_2", "72774_3"),
+         sire_id = replace(sire_id, id_f51 == "73192_2", "72905_1"),
+         dam_id = replace(dam_id, id_f51 == "73192_2", "72773_4")) %>% 
+  mutate_all(str_trim) %>%
+  mutate_all(str_squish) 
+write.csv(pedigree_12082020_temp, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12082020_temp_n4655.csv")
+  
