@@ -1,3 +1,11 @@
+## join to hs_metadata to make sure that sires and dames are represented
+
+
+## repeat mother and father cases
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv")
+
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") 
+
 ## "repeat mother and father cases (n=17)"
 read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
   mutate_all(as.character) %>% 
