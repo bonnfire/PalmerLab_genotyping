@@ -67,5 +67,5 @@ pedigree_12082020_temp <- pedigree_12082020 %>%
          dam_id = replace(dam_id, id_f51 == "73192_2", "72773_4")) %>% 
   mutate_all(str_trim) %>%
   mutate_all(str_squish) 
-write.csv(pedigree_12082020_temp, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12082020_temp_n4655.csv")
+write.csv(pedigree_12082020_temp, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12082020_temp_n4655.csv", row.names = F)
   

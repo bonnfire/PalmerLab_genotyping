@@ -1,3 +1,52 @@
+## for oksana meeting with su guo 
+# create phenotyping and sequencing table
+sample_barcode_lib_12092020 <- read.csv("sample_barcode_lib_10262020_n3451.csv") %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag) %>% 
+  rbind(kn04_df %>% 
+          rename("library_name" = "library") %>% 
+          mutate(filename = "2020-10-29-Flowcell Sample-Barcode list (KN04 Pool).xlsx", 
+                 flag = "NA") %>% 
+          select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)) %>% 
+  mutate_all(as.character)
+# create a table for sample id,library prep,and phenotypes
+oksana_fish_progress12092020 <- sample_barcode_lib_12092020 %>% 
+  subset(project_name == "r01_su_guo") %>% 
+  mutate(larva_breeder = "NA") %>% 
+  mutate(larva_breeder = replace(larva_breeder, grepl("Plate", rfid), "larva"), 
+         larva_breeder = replace(larva_breeder, library_name == "Fish Breeders", "breeder")) %>% 
+  bind_rows(riptide10 %>% 
+              subset(!x2 %in% c(missingriptide10$sample_id)) %>% select(x2) %>% rename("rfid" = "x2") %>% 
+              mutate(rfid = gsub("_(\\D)(\\d+)$", "_\\2\\1", rfid)) %>% 
+              mutate(library_name = "Riptide10", 
+                     larva_breeder = "larva",
+                     project_name = "r01_su_guo",
+                     comments = "not found in flowcell")) %>% 
+  rowwise() %>% 
+  mutate(rfid =  replace(rfid, grepl("Plate", rfid), gsub("-", "_", rfid) %>% gsub("_(\\D)(\\d+)$", "_\\2\\1", .))) %>% 
+  ungroup() 
+write.csv(oksana_fish_progress12092020, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/oksana_fish_progress12092020_sample_bar_lib.csv", row.names = F)
+
+missingriptide10 <- lapply(flowcell_files[2], function(x){
+  x <- u01.importxlsx(x)[[1]] %>% 
+    clean_names() 
+  return(x)
+})[[1]] %>% 
+  subset(library == "Riptide10")
+missingriptide10$library %>% table()
+
+riptide10 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Riptide library prep/Riptide 01-10/Riptide-10 Fish 20200204 Plate1 A904R7C7/Riptide10 Library.xlsx") %>% 
+  mutate_all(as.character) %>% 
+  clean_names() %>% 
+  subset(grepl("Plate", x2))
+
+riptide10 %>% 
+  subset(!x2 %in% c(missingriptide10$sample_id)) 
+
+# checking extraction records
+khai_tissueextraction_df_join %>% subset(rfid %in% c(riptide10 %>% 
+                                                       subset(!x2 %in% c(missingriptide10$sample_id)) %>% select(x2) %>% mutate(x2 = gsub("_", "", x2)) %>% unlist() %>% paste0)) %>% View()
+
+
 ## join to hs_metadata to make sure that sires and dames are represented
 
 
