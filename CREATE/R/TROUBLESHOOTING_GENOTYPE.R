@@ -1,3 +1,55 @@
+## troubleshooting sire x dame 
+metadata_n1536_corrected <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/hs_metadata_n1536_20201125.csv") %>% 
+  mutate_all(as.character) %>%
+  left_join(wfu_corrections_sire_dame, by = c("dames" = "breeder_id")) %>% 
+  left_join(wfu_corrections_sire_dame, by = c("sires" = "breeder_id")) %>%
+  rowwise() %>% 
+  mutate(breeder_sex.y = replace(breeder_sex.y, breeder_sex.y == "dam", dames),
+         dames = replace(dames, breeder_sex.x == "sire", sires),
+         sires = replace(sires, breeder_sex.x == "sire", breeder_sex.y)) %>% 
+  ungroup() %>% 
+  select(-matches('breeder_sex[.][xy]')) %>% 
+  mutate_all(str_trim)
+
+# checking for fixes
+metadata_n1536_corrected %>% 
+  select(dames, sires) %>%
+  gather("parent", "parent_id") %>%
+  distinct() %>% 
+  get_dupes(parent_id)
+
+# pairing to pedigree (# checking if these match with den's file)
+metadata_n1536_corrected %>% 
+  select(project_name, dames, sires) %>%
+  gather("parent", "parent_id", -project_name) %>%
+  distinct(parent_id, project_name) %>%
+  group_by(parent_id) %>%
+  summarise(projects = paste(project_name, collapse = ",")) %>% 
+  ungroup() %>% 
+  distinct(parent_id, projects) %>% 
+  # subset(grepl("_", parent_id)) %>% 
+  left_join(pedigree_12082020_temp, by = c("parent_id" = "id_f51")) %>% 
+  subset(projects != "p50_hao_chen_2014") %>% 
+  subset(is.na(cc)) %>% dim
+
+## temp metadata corrected (sire x dame pair for four rats are errors)
+metadata_n1536_corrected %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_hsrats_n1536_corrected_v1.csv", row.names = F)
+
+
+
+# repeat repeat mother father cases 
+wfu_corrections_sire_dame <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/breeder_id_sire_or_dames_n17_wfu.xlsx") %>% 
+  mutate_all(as.character) %>% 
+  mutate(breeder_sex = ifelse(is.na(DAM), "sire", "dam")) %>% 
+  select(breeder_id, breeder_sex)
+  
+
+  
+    
+
+
+
 ## for oksana meeting with su guo 
 # create phenotyping and sequencing table
 sample_barcode_lib_12092020 <- read.csv("sample_barcode_lib_10262020_n3451.csv") %>% 
@@ -9,7 +61,7 @@ sample_barcode_lib_12092020 <- read.csv("sample_barcode_lib_10262020_n3451.csv")
           select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)) %>% 
   mutate_all(as.character)
 # create a table for sample id,library prep,and phenotypes
-oksana_fish_progress12092020 <- sample_barcode_lib_12092020 %>% 
+oksana_fish_progress12092020 <- sample_barcode_lib_12092020 %> %
   subset(project_name == "r01_su_guo") %>% 
   mutate(larva_breeder = "NA") %>% 
   mutate(larva_breeder = replace(larva_breeder, grepl("Plate", rfid), "larva"), 
@@ -45,6 +97,22 @@ riptide10 %>%
 # checking extraction records
 khai_tissueextraction_df_join %>% subset(rfid %in% c(riptide10 %>% 
                                                        subset(!x2 %in% c(missingriptide10$sample_id)) %>% select(x2) %>% mutate(x2 = gsub("_", "", x2)) %>% unlist() %>% paste0)) %>% View()
+3610
+1190
+
+# update db bc names are wrong
+# drop from object the nontested 
+# note when adding kn04 flowcell, exclude the suguo, processed here already
+guo_sample_barcode_lib <- oksana_fish_progress12092020 %>% #these do not include the 5 that were not in the flowcell, find w comments == "not found in flowcell"
+  subset(!is.na(barcode)) %>% 
+  mutate(project_name = replace(project_name, larva_breeder=="breeder", "r01_su_guo_breeders"),
+         project_name = replace(project_name, larva_breeder=="larva", "r01_su_guo_larvae")) %>%
+  select(-larva_breeder) %>% 
+  mutate(rfid = gsub("_", "-", rfid)) #1771-5
+write.csv(guo_sample_barcode_lib, "~/Desktop/Database/csv files/sample_tracking/guo_sample_barcode_lib_n1766.csv", row.names = F)
+
+
+
 
 
 ## join to hs_metadata to make sure that sires and dames are represented

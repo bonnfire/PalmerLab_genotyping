@@ -1,4 +1,27 @@
 ## create and qc pedigree
+## pedigree as of 12/14/2020
+pedigree_12142020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Copy of Breeding Pedigree up to generation 36 12-8-20.xlsx") %>% 
+  mutate_all(as.character) %>%  # n = 4657
+  clean_names %>% 
+  mutate_all(toupper) %>% 
+  mutate_at(vars(matches("(sire|dam)_id"), "id_f51"), ~gsub("(\\d)$", "_\\1", .)) 
+# animals who had sire listed as a female rat 
+pedigree_12142020 %>% 
+  subset(sire_id %in% c(pedigree_12142020 %>% 
+                          subset(id_f51 %in% unique(pedigree_12082020$sire_id) & sex == "F") %>% 
+                          select(id_f51) %>% unlist() %>% as.character)) %>% # rows that list a "FEMALE" sire ("F" designated by individual record)
+  tibble::rownames_to_column("excel_row") 
+
+pedigree_12142020 %>% 
+  get_dupes(sw_id) %>% 
+  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dupe_sw_id_n100.xlsx")
+
+pedigree_12142020 %>% 
+  distinct() %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12152020_temp_n4655.csv", row.names = F)
+  
+
+
 
 ### pedigree as of 12/08/2020
 pedigree_12082020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Breeding Pedigree up to generation 36 12-8-20.xlsx") %>% 
@@ -69,3 +92,4 @@ pedigree_12082020_temp <- pedigree_12082020 %>%
   mutate_all(str_squish) 
 write.csv(pedigree_12082020_temp, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12082020_temp_n4655.csv", row.names = F)
   
+
