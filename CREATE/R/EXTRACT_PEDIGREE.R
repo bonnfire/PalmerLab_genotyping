@@ -19,7 +19,56 @@ pedigree_12142020 %>%
 pedigree_12142020 %>% 
   distinct() %>% 
   write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12152020_temp_n4655.csv", row.names = F)
-  
+
+pedigree_12142020_temp_fix <- pedigree_12142020 %>% 
+  distinct() %>% 
+  mutate(sire_id = replace(sire_id, id_f51 == "73154_1", "72774_3"),
+         sire_id = replace(sire_id, id_f51 == "73192_1", "72905_1"),
+         dam_id = replace(dam_id, id_f51 == "73192_1", "72773_4"),
+         sire_id = replace(sire_id, id_f51 == "73154_2", "72774_3"),
+         sire_id = replace(sire_id, id_f51 == "73192_2", "72905_1"),
+         dam_id = replace(dam_id, id_f51 == "73192_2", "72773_4")) %>% 
+  mutate_all(str_trim) %>%
+  mutate_all(str_squish) %>% 
+  rowwise() %>% 
+  mutate(sw_id = replace(sw_id, sex == "F"&grepl("M", sw_id), gsub("M", "F",sw_id))) %>% 
+  ungroup()
+
+pedigree_12142020_siredame <- pedigree_12142020_temp_fix %>% 
+  distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
+  rowwise() %>% 
+  mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
+         dam_id = paste0(dam_id, ",", dam_sw_id)) %>%
+  select(-matches("sw_id")) %>% 
+  gather("parent_sex", "parent_id") %>% 
+  separate(parent_id, into = c("parent_id", "parent_sw_id"), sep = ",") %>% 
+  distinct() %>%
+  mutate_all(~na_if(., "NA")) %>% 
+  subset(!is.na(parent_id)&!is.na(parent_sw_id))
+
+# two different parent_sw_id for parent_id
+pedigree_12142020_siredame %>% get_dupes(parent_id) %>% subset(grepl("M", parent_sw_id)&parent_sex=="sire_id"|grepl("F", parent_sw_id)&parent_sex=="dam_id") %>% select(parent_id, parent_sw_id) %>% get_dupes(parent_id) %>% select(-dupe_count) %>% as.data.frame(row.names = NA)
+# correct the list of sire x dame 
+pedigree_12142020_siredame_sex <- pedigree_12142020_siredame %>% 
+  mutate(sw_id_sex = str_extract(parent_sw_id, "[MF]")) %>% 
+  mutate(sd_sex = ifelse(parent_sex == "sire_id", "M", "F")) %>%  # sd = sire x dame
+  subset(sw_id_sex == sd_sex) %>% 
+  distinct(parent_id, sd_sex)
+
+# join to fix the dame and sire 
+pedigree_12142020_temp_fix_2 <- pedigree_12142020_temp_fix %>% 
+  left_join(pedigree_12142020_siredame_sex, by = c("sire_id" = "parent_id")) %>% 
+  left_join(pedigree_12142020_siredame_sex, by = c("dam_id" = "parent_id")) %>%
+  rowwise() %>% 
+  mutate(sd_sex.y = replace(sd_sex.y, sd_sex.y == "M", dam_id),
+         dam_id = replace(dam_id, sd_sex.x == "F", sire_id),
+         sire_id = replace(sire_id, sd_sex.x == "F", sd_sex.y)) %>% 
+  ungroup() %>% 
+  select(-matches('sd_sex[.][xy]')) %>% 
+  mutate_all(str_trim)
+
+
+
 
 
 
