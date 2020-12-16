@@ -34,7 +34,9 @@ metadata_n1536_corrected %>%
 
 ## temp metadata corrected (sire x dame pair for four rats are errors)
 metadata_n1536_corrected %>% 
-  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_hsrats_n1536_corrected_v1.csv", row.names = F)
+  distinct() %>% 
+  mutate(sires = replace(sires, sires == dames, "72774_3")) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_hsrats_n1536_corrected_v2.csv", row.names = F)
 
 
 
