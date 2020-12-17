@@ -1,4 +1,20 @@
 ## create and qc pedigree
+## pedigree as of 12/16/2020
+# renamed original file 
+pedigree_12162020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Breeding Pedigree up to generation 36 12-16-20.xlsx") %>% 
+  mutate_all(as.character) %>% 
+  clean_names %>% 
+  mutate_all(toupper) %>% 
+  mutate_at(vars(matches("(sire|dam)_id"), "id_f51"), ~gsub("(\\d)$", "_\\1", .)) 
+
+old_pedigree <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree.csv") %>% 
+  mutate_all(as.character)
+
+pedigree_12162020 %>% 
+  subset(sire_id %in% c(pedigree_12162020 %>% 
+                          subset(id_f51 %in% unique(pedigree_12162020$sire_id) & sex == "F") %>% 
+                          select(id_f51) %>% unlist() %>% as.character))
+
 ## pedigree as of 12/14/2020
 pedigree_12142020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Copy of Breeding Pedigree up to generation 36 12-8-20.xlsx") %>% 
   mutate_all(as.character) %>%  # n = 4657
@@ -66,6 +82,7 @@ pedigree_12142020_temp_fix_2 <- pedigree_12142020_temp_fix %>%
   ungroup() %>% 
   select(-matches('sd_sex[.][xy]')) %>% 
   mutate_all(str_trim)
+write.csv(pedigree_12142020_temp_fix_2, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12152020_temp_n4655_v2.csv", row.names = F)
 
 
 

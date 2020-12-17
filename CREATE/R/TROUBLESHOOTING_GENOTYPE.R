@@ -11,6 +11,18 @@ metadata_n1536_corrected <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie L
   select(-matches('breeder_sex[.][xy]')) %>% 
   mutate_all(str_trim)
 
+gbs_pedigree <- read.table("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/GBS6170.fam4Mendel") %>% 
+  mutate_all(as.character) %>% 
+  select(-V1) %>% 
+  rename("rfid" = "V2", 
+         "sires" = "V3",
+         "dame" = "V4")
+
+metadata_n1536_corrected %>% 
+  subset(dames %in% c("HSF02609", "HSF02616", "HSF02620", "HSF02629", "HSF02654", "HSF02661")|sires %in% c("HSM02602", "HSM02614", "HSM02627", "HSM02628", "HSM02649", "HSM02661")) %>% 
+  as.data.frame() %>% left_join(gbs_pedigree, by = c("dames"="V4"))
+
+
 # checking for fixes
 metadata_n1536_corrected %>% 
   select(dames, sires) %>%
