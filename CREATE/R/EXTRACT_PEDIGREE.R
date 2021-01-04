@@ -1,5 +1,11 @@
 ## create and qc pedigree
 ## pedigree as of 12/16/2020
+
+# apurva's copy 
+load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Riptide_control_pedigree.RData")
+ped_map 
+
+
 # renamed original file 
 pedigree_12162020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Breeding Pedigree up to generation 36 12-16-20.xlsx") %>% 
   mutate_all(as.character) %>% 
