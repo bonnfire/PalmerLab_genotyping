@@ -16,11 +16,11 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_Shippin
 # modifying code to extract from multiple google sheets
 #install.packages("googlesheets4")
 khai_tissueextractionNames <- googlesheets4::sheet_names(
-  googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)]
+  googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)]
   ) #extract the id code associated with the U01 Spleen&Fish Extraction Database 
 
 khai_tissueextraction <- lapply(khai_tissueextractionNames, function(x){             
-  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("extraction", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
 }) # extract all sheets in this workbook
 
 
@@ -334,3 +334,6 @@ ims %>%
 
 # load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_hannah_rebecca.RData")
 # load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_celine.RData")
+
+
+## 01/05/2020 dnaextractions to troubleshoot missing extractions from projects

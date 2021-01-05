@@ -4,6 +4,37 @@
 
 ### kn04
 
+# clean kn04 object, comments and x8 (No transponder and barcode doesn't match)
+# append sample metadata (sex and coatcolor , leaving out sire and dame)
+# join the fastq files info
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/fastq_seq04_filenames.csv") %>%
+  separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+         file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+  distinct(runid, file) %>% 
+  mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% subset(grepl("^Riptide([3][1-9]|40)", file)) %>% 
+  mutate(library_name = str_extract(file, "Riptide\\d+"),
+         pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+  select(-file) %>% 
+  right_join(kn04_df %>%  
+               rename("library_name" = "library") %>%
+               mutate(comments = coalesce(comments, x8)) %>% 
+               rowwise() %>% 
+               mutate(comments = ifelse(!is.na(comments)&!is.na(x8), paste0(comments, x8), comments),
+                      flag = NA,
+                      comments = ifelse(grepl("Barcode does not match", comments), "Barcode does not match number written on top of tube", comments)),
+             by = c("library_name", "pcr_barcode")) %>% 
+  mutate(organism = ifelse(!grepl("guo", project_name), "rat", "zebrafish"), strain = ifelse(organism != "zebrafish", "Heterogenous stock", "Ekkwill fish")) %>% 
+  mutate(rfid = gsub(" ", "", rfid)) %>% 
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/samplemetadata_10192020.csv") %>% mutate_all(as.character), by = "rfid") %>% 
+  mutate(filename = "2020-10-29-Flowcell Sample-Barcode list (KN04 Pool).xlsx") %>% 
+  select(rfid, runid, fastq_files, library_name, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", row.names = F)
+
+
+
+
+
 ### kn03
 
 # add breeder rfid_genotype column 
