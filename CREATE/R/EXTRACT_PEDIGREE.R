@@ -1,4 +1,52 @@
 ## create and qc pedigree
+
+## qc'ing with angela 01/06/2021
+pedigree_01062021<- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/BREEDING PEDIGREE up to generation 36 01_05_2020.xlsx") %>% 
+  mutate_all(as.character) %>% 
+  clean_names %>% 
+  mutate_all(toupper) %>% 
+  mutate_at(vars(matches("(sire|dam)_id"), "id_f51"), ~gsub("(\\d)$", "_\\1", .)) 
+
+pedigree_01062021_siredame <- pedigree_01062021 %>% 
+  distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
+  rowwise() %>% 
+  mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
+         dam_id = paste0(dam_id, ",", dam_sw_id)) %>%
+  select(-matches("sw_id")) %>% 
+  gather("parent_sex", "parent_id") %>% 
+  separate(parent_id, into = c("parent_id", "parent_sw_id"), sep = ",") %>%
+  mutate(parent_sw_id = gsub(" ", "", parent_sw_id)) %>% 
+  distinct() %>%
+  mutate_all(~na_if(., "NA")) %>% 
+  subset(!is.na(parent_id)&!is.na(parent_sw_id)) %>% 
+  mutate(parent_id = replace(parent_id, parent_sw_id == "WHSF0513", "73191_2"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSM0523", "73204_1"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSM0937", "75281_1"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSF0904", "75067_2"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSM1036", "75801_1"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSF1023B", "75699_2"),
+    parent_id = replace(parent_id, parent_sw_id == "WHSF1038B", "75735_2")) %>% 
+  mutate(parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSF01319BB", "HSF01319B"),
+         parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSF01331B", "HSF013312")) %>% 
+  distinct() ## waiting for two more cases 
+
+# two different parent_sw_id for parent_id
+pedigree_01062021_siredame %>% mutate(parent_id_corrected = parent_id) %>% 
+  mutate(parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0513", "73191_2"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0523", "73204_1"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0937", "75281_1"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0904", "75067_2"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM1036", "75801_1"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1023B", "75699_2"),
+    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1038B", "75735_2")) %>%
+  get_dupes(parent_id_corrected) %>% 
+  subset(grepl("M", parent_sw_id)&parent_sex=="sire_id"|grepl("F", parent_sw_id)&parent_sex=="dam_id") %>% 
+  distinct(parent_id_corrected, parent_sw_id) %>% get_dupes(parent_id_corrected) %>% select(-dupe_count) %>% 
+  as.data.frame(row.names = NA)
+
+
+
+
 ## pedigree as of 12/16/2020
 
 # apurva's copy 
