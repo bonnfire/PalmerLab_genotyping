@@ -336,4 +336,62 @@ ims %>%
 # load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_celine.RData")
 
 
-## 01/05/2020 dnaextractions to troubleshoot missing extractions from projects
+## 01/05/2020 dnaextractions to troubleshoot missing extractions from projects olivier
+
+khai_tissueextractionNames <- googlesheets4::sheet_names(
+  googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)]
+) #extract the id code associated with the U01 Spleen&Fish Extraction Database 
+
+khai_tissueextraction_1_52 <- lapply(khai_tissueextractionNames[1:52], function(x){             
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
+}) # extract all sheets in this workbook
+
+
+# clean for df 
+khai_tissueextraction_df_1_52 <- khai_tissueextraction_1_52 %>% 
+  lapply(., function(x){
+    x %>%
+      mutate_all(as.character)
+  }) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
+  mutate(rfid = ifelse(
+    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+    paste0("933000", sample_id_barcode),
+    ifelse(
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+      paste0("93300", sample_id_barcode),
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode) & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+             sample_id_barcode, sample_id_barcode)
+    ) 
+  )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
+         rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294"), #fix the dupe rfid
+         rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid, ignore.case = T), gsub("_", "", rfid)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("20200617Plate", "20200616Plate", rfid)
+  ) %>% ###
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("_", "-", rfid))),
+         rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", rfid)))) %>% 
+  # project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% 
+  # mutate(rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid), gsub("_", "", rfid)),
+  mutate(riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
+  ungroup() %>% 
+  distinct() %>% 
+  # left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_metadata_rfidproject_10192020.csv") %>% mutate_all(as.character), by = "rfid") %>% 
+  left_join(., tissue_df[, c("rfid", "project_name")], by = "rfid") %>% # to account for the naive animals
+  mutate(project_name = coalesce(project_name.y, project_name.x)) %>% 
+  select(-matches("project_name[.][xy]")) %>% 
+  # subset(!(grepl("^000")&nchar(rfid) == 10)) ## XX temporarily remove these bc no metadata
+  # subset(dna_plate_code != "RiptideControl") %>%
+  # subset(!is.na(project_name)) %>% ## XX temporary until zebrafish get sorted out 
+  distinct()
+
+khai_tissueextraction_df_1_52 %>% 
+  select(rfid, project_name) %>% 
+  select(project_name) %>% table(exclude = NULL)

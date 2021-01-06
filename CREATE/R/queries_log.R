@@ -1,5 +1,16 @@
 ## data queries
 
+## for db update, troubleshoot missing id's in extraction log 
+khai_tissueextraction_df_1_52 %>% 
+  select(rfid, project_name) %>% 
+  subset(grepl("olivier", project_name)) %>% mutate(extracted = "khai_record") %>% 
+  # left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_01052021.csv") %>% 
+  #             mutate_all(as.character) %>%  subset(grepl("olivier", project_name)), by = "rfid") %>% 
+  mutate(project_name = replace(project_name, rfid %in% c("933000320047859", "933000320047950", "933000320047941", "933000320187183", "933000320186952"), "u01_olivier_george_cocaine"), 
+         project_name = replace(project_name, rfid %in% c("933000320187305", "933000320187314"), "u01_olivier_george_oxycodone")) %>% 
+  select(project_name) %>% table()
+  
+
 #fish breeders 
 
 ### kn04
@@ -7,7 +18,7 @@
 # clean kn04 object, comments and x8 (No transponder and barcode doesn't match)
 # append sample metadata (sex and coatcolor , leaving out sire and dame)
 # join the fastq files info
-read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/fastq_seq04_filenames.csv") %>%
+kn04_sample_metadata <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/fastq_seq04_filenames.csv") %>%
   separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
   mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
          file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
@@ -28,8 +39,12 @@ read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotypi
   mutate(rfid = gsub(" ", "", rfid)) %>% 
   left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/samplemetadata_10192020.csv") %>% mutate_all(as.character), by = "rfid") %>% 
   mutate(filename = "2020-10-29-Flowcell Sample-Barcode list (KN04 Pool).xlsx") %>% 
-  select(rfid, runid, fastq_files, library_name, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain) %>% 
-  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", row.names = F)
+  select(rfid, runid, fastq_files, library_name, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain)
+write.csv(kn04_sample_metadata, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", row.names = F)
+# for db
+kn04_sample_metadata %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag) %>% 
+  write.csv("~/Desktop/Database/csv files/sample_tracking/kn04_fastq_sample_barcode_lib_n952.csv", row.names = F) #slight rename 
 
 
 
