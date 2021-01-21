@@ -5,44 +5,127 @@ pedigree_01062021<- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonni
   mutate_all(as.character) %>% 
   clean_names %>% 
   mutate_all(toupper) %>% 
-  mutate_at(vars(matches("(sire|dam)_id"), "id_f51"), ~gsub("(\\d)$", "_\\1", .)) 
+  mutate_at(vars(matches("(sire|dam)_id"), "id_f51"), ~gsub("(\\d)$", "_\\1", .)) # format access id's to fix our records in wfu sheets
 
-pedigree_01062021_siredame <- pedigree_01062021 %>% 
+## fixing w angela notes 
+pedigree_01062021_fix <- pedigree_01062021 %>% 
+  mutate(
+    # sire_sw_id = replace(sire_sw_id, id_f51 %in% c("64708_1"), "HSM01117"), # using offspring to fix sire or dam sw_id
+    #      sire_sw_id = replace(sire_sw_id, id_f51 %in% c("64713_1"), "HSM01117B"),
+    #      sire_sw_id = replace(sire_sw_id, id_f51 %in% c("65075_1"), "HSM01117B"),
+    #      sire_id = replace(sire_id, sire_sw_id == "HSM01117", "64556_1"),
+    sire_sw_id = replace(sire_sw_id, sire_id == "64556_1", "HSM01117B"), 
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "65075_1", "HSM01117B"),
+    
+    dam_sw_id = replace(dam_sw_id, dam_id == "65144_2", "HSF01201"),
+    dam_id = replace(dam_id, dam_sw_id == "HSF01201", "65144_2"),
+    dam_id = replace(dam_id, dam_sw_id == "HSF01202", "64660_2"),
+    
+    dam_sw_id = replace(dam_sw_id, dam_sw_id == "HSF013312", "HSF01331B"),
+    
+    dam_sw_id = replace(dam_sw_id, dam_sw_id == "HSF01319BB", "HSF01319B"),
+    dam_id = replace(dam_id, dam_sw_id == "HSF01319B", "65577_2"), 
+    
+    dam_id = replace(dam_id, dam_sw_id == "WHSF0513", "73191_2"),
+    
+    sire_id = replace(sire_id, sire_sw_id == "WHSM0523", "73204_1"),
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "75097_1", "WHSM0936"),
+    
+    dam_sw_id = replace(dam_sw_id, dam_id == "75098_2", "WHSF0903"),
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "75691_1", "WHSM1061"),
+    
+    dam_id = replace(dam_id, dam_sw_id == "WHSF1023B", "75699_2"),
+    
+    dam_id = replace(dam_id, dam_sw_id == "WHSF1038B", "75735_2"),
+    
+    ## fixing double sw_id 
+    sire_sw_id = replace(sire_sw_id, sire_id == "43873_3", "HSM0112"), 
+    sire_sw_id = replace(sire_sw_id, sire_id == "64287_1", "HSM01120"),
+    
+    dam_sw_id = replace(dam_sw_id, dam_id == "74140_2", "WHSF0707"),   
+    dam_sw_id = replace(dam_sw_id, dam_id == "74208_2", "WHSF0707B"), 
+    
+    dam_sw_id = replace(dam_sw_id, dam_id == "74207_2", "WHSF0751"),   
+    dam_sw_id = replace(dam_sw_id, dam_id == "74187_2", "WHSF0751B"),   
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "74204_1", "WHSM0716"),   
+    sire_sw_id = replace(sire_sw_id, sire_id == "74217_3", "WHSM0734"),
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "74142_1", "WHSM0725"),   
+    sire_sw_id = replace(sire_sw_id, sire_id == "74134_1", "WHSM0713")
+  )
+
+## do the id's as parents match when they're children
+pedigree_01062021_fix %>%
   distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
-  rowwise() %>% 
+  rowwise() %>%
   mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
          dam_id = paste0(dam_id, ",", dam_sw_id)) %>%
-  select(-matches("sw_id")) %>% 
-  gather("parent_sex", "parent_id") %>% 
+  select(-matches("sw_id")) %>%
+  gather("parent_sex", "parent_id") %>%
   separate(parent_id, into = c("parent_id", "parent_sw_id"), sep = ",") %>%
-  mutate(parent_sw_id = gsub(" ", "", parent_sw_id)) %>% 
+  mutate(parent_sw_id = gsub(" ", "", parent_sw_id)) %>%
   distinct() %>%
-  mutate_all(~na_if(., "NA")) %>% 
-  subset(!is.na(parent_id)&!is.na(parent_sw_id)) %>% 
-  mutate(parent_id = replace(parent_id, parent_sw_id == "WHSF0513", "73191_2"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSM0523", "73204_1"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSM0937", "75281_1"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSF0904", "75067_2"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSM1036", "75801_1"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSF1023B", "75699_2"),
-    parent_id = replace(parent_id, parent_sw_id == "WHSF1038B", "75735_2")) %>% 
+  mutate_all(~na_if(., "NA")) %>%
+  subset(!(is.na(parent_id)&is.na(parent_sw_id))) %>% 
+  left_join(pedigree_01062021_fix[, c("id_f51", "sw_id")] %>% rename("sw_id_as_child"="sw_id"), by = c("parent_id" = "id_f51")) %>% 
+  subset(parent_sw_id != sw_id_as_child)
+
+
+
+
+
+
+
+
+pedigree_01062021_siredame <- pedigree_01062021 %>%
+  distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
+  rowwise() %>%
+  mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
+         dam_id = paste0(dam_id, ",", dam_sw_id)) %>%
+  select(-matches("sw_id")) %>%
+  gather("parent_sex", "parent_id") %>%
+  separate(parent_id, into = c("parent_id", "parent_sw_id"), sep = ",") %>%
+  mutate(parent_sw_id = gsub(" ", "", parent_sw_id)) %>%
+  distinct() %>%
+  mutate_all(~na_if(., "NA")) %>%
+  subset(!is.na(parent_id)&!is.na(parent_sw_id)) %>%
+  mutate(parent_id = replace(parent_id, parent_sw_id == "HSF01201", "64659_2"),
+         parent_id = replace(parent_id, parent_sw_id == "HSF01202", "64660_2"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSF0513", "73191_2"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSM0523", "73204_1"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSM0937", "75281_1"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSF0904", "75067_2"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSM1036", "75801_1"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSF1023B", "75699_2"),
+         parent_id = replace(parent_id, parent_sw_id == "WHSF1038B", "75735_2")) %>%
   mutate(parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSF01319BB", "HSF01319B"),
-         parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSF01331B", "HSF013312")) %>% 
-  distinct() ## waiting for two more cases 
+         parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSF01331B", "HSF013312"),
+         parent_sw_id = replace(parent_sw_id, parent_sw_id == "HSM01172", "HSM01117B"),) %>%
+  distinct() ## waiting for two more cases
 
 # two different parent_sw_id for parent_id
-pedigree_01062021_siredame %>% mutate(parent_id_corrected = parent_id) %>% 
-  mutate(parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0513", "73191_2"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0523", "73204_1"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0937", "75281_1"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0904", "75067_2"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM1036", "75801_1"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1023B", "75699_2"),
-    parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1038B", "75735_2")) %>%
-  get_dupes(parent_id_corrected) %>% 
-  subset(grepl("M", parent_sw_id)&parent_sex=="sire_id"|grepl("F", parent_sw_id)&parent_sex=="dam_id") %>% 
-  distinct(parent_id_corrected, parent_sw_id) %>% get_dupes(parent_id_corrected) %>% select(-dupe_count) %>% 
+pedigree_01062021_siredame %>%
+  # mutate(parent_id_corrected = parent_id) %>%
+  # mutate(parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0513", "73191_2"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0523", "73204_1"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM0937", "75281_1"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF0904", "75067_2"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSM1036", "75801_1"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1023B", "75699_2"),
+  #   parent_id_corrected = replace(parent_id_corrected, parent_sw_id == "WHSF1038B", "75735_2")) %>%
+  # get_dupes(parent_id_corrected) %>%
+  get_dupes(parent_id) %>%
+  subset(grepl("M", parent_sw_id)&parent_sex=="sire_id"|grepl("F", parent_sw_id)&parent_sex=="dam_id") %>%
+  # distinct(parent_id_corrected, parent_sw_id) %>% get_dupes(parent_id_corrected) %>% select(-dupe_count) %>%
+  distinct(parent_id, parent_sw_id) %>% get_dupes(parent_id) %>% select(-dupe_count) %>%
   as.data.frame(row.names = NA)
+
+
+
 
 
 

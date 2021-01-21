@@ -191,7 +191,38 @@ kn04_df %>%
 
 
 
+## kn05 
 
+kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) .xlsx")[[1]] %>% 
+  clean_names() %>% 
+  mutate(rfid = sample_id) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("^\\d{9}$", sample_id), paste0("933000", sample_id)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("-", "_", rfid),
+         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid))) %>% 
+  ungroup()
+
+kn05_df <- kn05_xl %>%
+  left_join(sample_metadata[, c("rfid", "project_name")] %>% 
+              bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n385.csv") %>% 
+                      mutate_all(as.character) %>% 
+                      select("rfid" = sample_id, rat_unique_id, project_name) ), by = "rfid") %>% 
+  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))  # after verifying that the other libraries are all Plate id fish 
+
+kn04_xl %>% mutate(rfid = gsub("_", "", rfid)) %>% left_join(sample_metadata[, c("rfid", "project_name")] %>%
+                                                               mutate(rfid = gsub("_", "", rfid)) %>%
+                                                               rowwise() %>%
+                                                               mutate(rfid = replace(rfid, grepl("Plate", rfid), gsub("_(\\D)(\\d+)$", "\\2\\1", rfid))), by = "rfid") %>%
+  subset(is.na(project_name)) %>% naniar::vis_miss()
+
+# generate sample barcode lib for Khai to submit
+kn04_df %>%
+  select(-sample_id, -project_name) %>% 
+  select(rfid, everything()) %>% 
+  rename("sample_id" = "rfid") %>% 
+  mutate_all(as.character) %>% 
+  write.xlsx("2020-10-29-Flowcell Sample-Barcode list (KN04 Pool) ID.xlsx")
 
 
 

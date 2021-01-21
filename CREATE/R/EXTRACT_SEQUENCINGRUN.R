@@ -57,12 +57,15 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
     )
   )) %>% # include the schema names
   ungroup() %>% 
-  mutate(full_run_id = gsub("/", "", full_run_id))
+  mutate(full_run_id = gsub("/", "", full_run_id)) %>% 
+  rowwise() %>% 
+  mutate(library_name = replace(library_name, !grepl("Riptide", library_name)&grepl("KN", project_details), paste("Riptide", library_name))) %>% 
+  ungroup()
 
-# save object temporarily for apurva's review 06/09/2020
+# save object temporarily for apurva's review 06/09/2020 # 01/13/2021
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
 sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")
-
+sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.csv", row.names = F)
 
 # CREATE SEQUENCING RUN LOG
 sequencing_run_log <- sequencing_run_log_IGM_df %>% 
