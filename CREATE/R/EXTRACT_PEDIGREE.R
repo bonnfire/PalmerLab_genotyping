@@ -1,4 +1,18 @@
 ## create and qc pedigree
+# trying to use db access id's to fix CANNOT 
+## db query returned 0 
+# select * from (select 'u01_tom_jhou' as schema, sires, dames, accessid, sex from u01_tom_jhou.wfu_master
+#                union all
+#                select 'u01_suzanne_mitchell' as schema, sires, dames, accessid, sex from u01_suzanne_mitchell.wfu_master
+#                union all
+#                select 'u01_olivier_george_cocaine' as schema, sires, dames, accessid, sex from u01_olivier_george_cocaine.wfu_master
+#                union all
+#                select 'u01_olivier_george_oxycodone' as schema, sires, dames, accessid, sex from u01_olivier_george_oxycodone.wfu_master
+#                union all
+#                select 'u01_peter_kalivas_us' as schema, sires, dames, accessid, sex from u01_peter_kalivas_us.wfu_master
+#                union all
+#                select 'u01_peter_kalivas_italy' as schema, sires, dames, accessid, sex from u01_peter_kalivas_italy.wfu_master) as derivedTable 
+# inner JOIN pedigree_temp ON pedigree_temp.id_f51 = derivedTable.accessid and pedigree_temp.sex = derivedTable.sex
 
 ## qc'ing with angela 01/06/2021
 pedigree_01062021<- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/BREEDING PEDIGREE up to generation 36 01_05_2020.xlsx") %>% 
@@ -55,11 +69,13 @@ pedigree_01062021_fix <- pedigree_01062021 %>%
     sire_sw_id = replace(sire_sw_id, sire_id == "74217_3", "WHSM0734"),
     
     sire_sw_id = replace(sire_sw_id, sire_id == "74142_1", "WHSM0725"),   
-    sire_sw_id = replace(sire_sw_id, sire_id == "74134_1", "WHSM0713")
+    sire_sw_id = replace(sire_sw_id, sire_id == "74134_1", "WHSM0713"),
+    
+    sire_sw_id = replace(sire_sw_id, sire_id == "43873_3", "HSM0112")
   )
 
 ## do the id's as parents match when they're children
-pedigree_01062021_fix %>%
+pedigree_id_nomatch <- pedigree_01062021_fix %>%
   distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
   rowwise() %>%
   mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
@@ -74,8 +90,40 @@ pedigree_01062021_fix %>%
   left_join(pedigree_01062021_fix[, c("id_f51", "sw_id")] %>% rename("sw_id_as_child"="sw_id"), by = c("parent_id" = "id_f51")) %>% 
   subset(parent_sw_id != sw_id_as_child)
 
+pedigree_01062021_fix %>%
+  distinct(sire_id, dam_id, sire_sw_id, dam_sw_id) %>%
+  rowwise() %>%
+  mutate(sire_id = paste0(sire_id, ",", sire_sw_id),
+         dam_id = paste0(dam_id, ",", dam_sw_id)) %>%
+  select(-matches("sw_id")) %>%
+  gather("parent_sex", "parent_id") %>%
+  separate(parent_id, into = c("parent_id", "parent_sw_id"), sep = ",") %>%
+  mutate(parent_sw_id = gsub(" ", "", parent_sw_id)) %>%
+  distinct() %>%
+  mutate_all(~na_if(., "NA")) %>%
+  subset(!(is.na(parent_id)&is.na(parent_sw_id))) %>% 
+  left_join(pedigree_01062021_fix[, c("id_f51", "sw_id")] %>% rename("access_id_as_child"="id_f51"), by = c("parent_sw_id" = "sw_id")) %>% 
+  subset(parent_id != access_id_as_child) %>% 
+  subset(!is.na(parent_sw_id))
 
+# temp pedigree w NA to riyan 
+pedigree_01062021_fix_temp <- pedigree_01062021_fix %>% 
+  mutate(comments = case_when(
+    id_f51 %in% pedigree_id_nomatch$parent_id | sw_id %in% pedigree_id_nomatch$sw_id_as_child | sire_id %in% pedigree_id_nomatch$parent_id | sire_id %in% pedigree_id_nomatch$parent_id | dam_id %in% pedigree_id_nomatch$parent_id | sire_sw_id %in% pedigree_id_nomatch$parent_sw_id ~ "NA ID as parent and as child do not match",
+    TRUE ~ NA_character_
+  )) %>% 
+  mutate(id_f51 = replace(id_f51, id_f51 %in% pedigree_id_nomatch$parent_id, NA),
+         sw_id = replace(sw_id, sw_id %in% pedigree_id_nomatch$sw_id_as_child, NA),
+         sire_id = replace(sire_id, sire_id %in% pedigree_id_nomatch$parent_id, NA), 
+         dam_id = replace(dam_id, dam_id %in% pedigree_id_nomatch$parent_id, NA), 
+         sire_sw_id = replace(sire_sw_id, sire_sw_id %in% pedigree_id_nomatch$parent_sw_id, NA), 
+         dam_sw_id = replace(dam_sw_id, dam_sw_id %in% pedigree_id_nomatch$parent_sw_id, NA)) %>% 
+  mutate(dob = openxlsx::convertToDate(dob))
+pedigree_01062021_fix_temp %>% 
+  distinct() %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_01222021_temp_n4655.csv", row.names = F)
 
+  
 
 
 

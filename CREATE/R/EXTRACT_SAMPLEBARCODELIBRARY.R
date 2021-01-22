@@ -205,24 +205,21 @@ kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Se
 
 kn05_df <- kn05_xl %>%
   left_join(sample_metadata[, c("rfid", "project_name")] %>% 
-              bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n385.csv") %>% 
+              bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n384.csv") %>% 
                       mutate_all(as.character) %>% 
                       select("rfid" = sample_id, rat_unique_id, project_name) ), by = "rfid") %>% 
-  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))  # after verifying that the other libraries are all Plate id fish 
-
-kn04_xl %>% mutate(rfid = gsub("_", "", rfid)) %>% left_join(sample_metadata[, c("rfid", "project_name")] %>%
-                                                               mutate(rfid = gsub("_", "", rfid)) %>%
-                                                               rowwise() %>%
-                                                               mutate(rfid = replace(rfid, grepl("Plate", rfid), gsub("_(\\D)(\\d+)$", "\\2\\1", rfid))), by = "rfid") %>%
-  subset(is.na(project_name)) %>% naniar::vis_miss()
+  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo")) %>%   # after verifying that the other libraries are all Plate id fish 
+  rowwise() %>% 
+  mutate(sample_id = replace(sample_id, project_name == "u01_huda_akil_sd", rat_unique_id)) %>% 
+  ungroup()
 
 # generate sample barcode lib for Khai to submit
-kn04_df %>%
+kn05_df %>%
   select(-sample_id, -project_name) %>% 
   select(rfid, everything()) %>% 
   rename("sample_id" = "rfid") %>% 
   mutate_all(as.character) %>% 
-  write.xlsx("2020-10-29-Flowcell Sample-Barcode list (KN04 Pool) ID.xlsx")
+  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) ID.xlsx")
 
 
 
