@@ -1,4 +1,55 @@
 -- !preview conn=DBI::dbConnect(RSQLite::SQLite())
+
+--- 
+select schema, count(*) from (select 'u01_tom_jhou' as schema, sires, dames, accessid, sex from u01_tom_jhou.wfu_master
+union all
+select 'u01_suzanne_mitchell' as schema, sires, dames, accessid, sex from u01_suzanne_mitchell.wfu_master
+union all
+select 'u01_olivier_george_cocaine' as schema, sires, dames, accessid, sex from u01_olivier_george_cocaine.wfu_master
+union all
+select 'u01_olivier_george_oxycodone' as schema, sires, dames, accessid, sex from u01_olivier_george_oxycodone.wfu_master
+union all
+select 'u01_peter_kalivas_us' as schema, sires, dames, accessid, sex from u01_peter_kalivas_us.wfu_master
+union all
+select 'u01_peter_kalivas_italy' as schema, sires, dames, accessid, sex from u01_peter_kalivas_italy.wfu_master)
+as derivedTable group by schema 
+
+CREATE temp TABLE pedigree_temp (
+	id_f51 varchar(10) NOT NULL, 
+	cc VARCHAR(15), 
+	sex VARCHAR(1) NOT NULL, 
+	fam_no varchar(7), 
+	dob varchar(7), 
+	home_cage varchar(7), 
+	sire_id varchar(11), 
+	dam_id varchar(11), 
+	transpondernumber VARCHAR(14), 
+	sw_id VARCHAR(10), 
+	generation DECIMAL NOT NULL, 
+	ear_punch VARCHAR(5), 
+	sire_sw_id VARCHAR(11), 
+	dam_sw_id VARCHAR(11)
+);
+
+COPY pedigree_temp
+FROM '/home/bonnie/Desktop/Database/csv files/sample_tracking/pedigree_temp.csv' WITH (FORMAT 'csv', HEADER, NULL '');
+
+select * from pedigree_temp; 
+
+
+select * from (select 'u01_tom_jhou' as schema, sires, dames, accessid, sex from u01_tom_jhou.wfu_master
+union all
+select 'u01_suzanne_mitchell' as schema, sires, dames, accessid, sex from u01_suzanne_mitchell.wfu_master
+union all
+select 'u01_olivier_george_cocaine' as schema, sires, dames, accessid, sex from u01_olivier_george_cocaine.wfu_master
+union all
+select 'u01_olivier_george_oxycodone' as schema, sires, dames, accessid, sex from u01_olivier_george_oxycodone.wfu_master
+union all
+select 'u01_peter_kalivas_us' as schema, sires, dames, accessid, sex from u01_peter_kalivas_us.wfu_master
+union all
+select 'u01_peter_kalivas_italy' as schema, sires, dames, accessid, sex from u01_peter_kalivas_italy.wfu_master) as derivedTable 
+inner JOIN pedigree_temp ON pedigree_temp.id_f51 = derivedTable.sires 
+
 ---------------------------
 -- save workspace for inserting from copy 
 SELECT * FROM information_schema.tables WHERE table_schema = 'u01_olivier_george_oxycodone'

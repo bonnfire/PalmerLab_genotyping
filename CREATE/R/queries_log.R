@@ -47,7 +47,25 @@ kn04_sample_metadata %>%
   write.csv("~/Desktop/Database/csv files/sample_tracking/kn04_fastq_sample_barcode_lib_n952.csv", row.names = F) #slight rename 
 
 
+## pull out the sires dames info from db 
+kn04_hs_siredam <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_db_join.csv") %>% 
+  mutate_all(as.character) %>% 
+  distinct(rfid, sires, dames) %>% 
+  right_join(kn04_sample_metadata, by = "rfid") %>% 
+  left_join(pedigree_01062021_fix_temp %>% select(id_f51, "parent_sex" = sex) %>% subset(sex = "M"), by = c( "sires" = "id_f51")) %>% 
+  left_join(pedigree_01062021_fix_temp %>% select(id_f51, "parent_sex" = sex) %>% subset(sex = "F"), by = c( "dames" = "id_f51")) %>% 
+  subset(project_name != "r01_su_guo") %>% 
+  rowwise() %>% 
+  mutate(parent_sex.x = replace(parent_sex.x, parent_sex.x == "F"&project_name != "r01_su_guo", sires)) %>%  
+  mutate(sires = replace(sires, parent_sex.y == "M"&project_name != "r01_su_guo", dames),
+         dames = replace(dames, parent_sex.y == "M"&project_name != "r01_su_guo", parent_sex.x)) %>% 
+  ungroup() %>%
+  select(-matches("[.][xy]$"))
 
+write.csv(kn04_hs_siredam, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_hs_parents_n376.csv", row.names = F)
+
+
+kn04_hs_siredam %>% subset(sires == dames)
 
 
 ### kn03
