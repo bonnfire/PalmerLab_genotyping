@@ -193,7 +193,7 @@ kn04_df %>%
 
 ## kn05 
 
-kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) .xlsx")[[1]] %>% 
+kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) ID.xlsx")[[1]] %>% 
   clean_names() %>% 
   mutate(rfid = sample_id) %>% 
   rowwise() %>% 
@@ -204,6 +204,7 @@ kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Se
   ungroup()
 
 kn05_df <- kn05_xl %>%
+  select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
   left_join(sample_metadata[, c("rfid", "project_name")] %>% 
               bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n384.csv") %>% 
                       mutate_all(as.character) %>% 

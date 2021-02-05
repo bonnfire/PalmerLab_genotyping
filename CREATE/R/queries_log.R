@@ -1,4 +1,28 @@
 ## data queries
+## to reextract
+reextract_01 <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/genotype_log.csv", sep = ";") %>% 
+  mutate_all(as.character) %>% 
+  # rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/genotype_log_933000320046318.csv", sep = ";") %>% mutate_all(as.character)) %>% 
+  subset(QC_sex == "reject"|QC_missing == "reject"|QC_heterozygosity == "reject"|QC_coat_color_albino == "reject") %>% 
+  left_join(khai_tissueextraction_df_join %>% 
+              select(rfid, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments), by = "rfid") %>% 
+  mutate(comments = ifelse(rfid == "933000320046318", paste0("beagle imputed albino snp"), comments))  
+
+reextract_01 %>% 
+  subset(!is.na(storage_box_of_spleen)) %>%
+  subset(!grepl("mismatch", comments, ignore.case = T)) %>% 
+  subset(!(QC_coat_color_albino == "reject"&num_reject==1&rfid!="933000320046318")) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/rerun_n96_02052021.csv", row.names = F)
+
+reextract_01 %>% 
+  subset(is.na(storage_box_of_spleen)) %>% 
+  left_join(khai_tissueextraction_df_join %>% 
+              select(sample_id_barcode, storage_box_of_spleen, freezer_location_of_tissue, position_in_box), by = c("rfid" = "sample_id_barcode"))
+
+
+## figure out these four cases and add constraint to foreign key 
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_hsrats_n1536_corrected_v2.csv") %>% subset(library_name == "Riptide16") %>%  anti_join(khai_tissueextraction_df_join %>% subset(riptide_plate_number == "Riptide16"),. , by = "rfid") %>% select(transponder, sample_id_barcode, rfid)
+
 
 ## for db update, troubleshoot missing id's in extraction log 
 khai_tissueextraction_df_1_52 %>% 

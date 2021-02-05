@@ -309,6 +309,11 @@ jerry_shipments_df <- jerry_shipments %>%
   select(matches("rfid|date|box")) %>% 
   gather(tissue, shipping_box, cecum_box:baculum_box) %>% 
   mutate(tissue_type = gsub("_box", "", tissue))
+
+
+# extract number of tissues sent to us? 02/04/2021
+
+jerry_shipments_2 <- read_excel("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues/RatSampleCollection_Batch19_NY-Ishiwari_12-29Jan2021.xlsx", col_names = F)
   
 
 #################################################

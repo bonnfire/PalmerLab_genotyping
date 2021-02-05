@@ -123,8 +123,10 @@ pedigree_01062021_fix_temp %>%
   distinct() %>% 
   write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_01222021_temp_n4655.csv", row.names = F)
 
-  
-
+## create file with the na's for the db
+pedigree_01062021_fix_temp %>% 
+  distinct() %>% 
+  write.csv("~/Desktop/Database/csv files/sample_tracking/pedigree_temp_n4633.csv", row.names = F)
 
 
 
