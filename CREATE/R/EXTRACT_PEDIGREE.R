@@ -187,7 +187,7 @@ load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/C
 ped_map 
 
 
-# renamed original file 
+# renamed original file   
 pedigree_12162020 <- openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Breeding Pedigree up to generation 36 12-16-20.xlsx") %>% 
   mutate_all(as.character) %>% 
   clean_names %>% 
@@ -272,6 +272,8 @@ pedigree_12142020_temp_fix_2 <- pedigree_12142020_temp_fix %>%
 write.csv(pedigree_12142020_temp_fix_2, "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree_12152020_temp_n4655_v2.csv", row.names = F)
 
 
+  
+  
 
 
 

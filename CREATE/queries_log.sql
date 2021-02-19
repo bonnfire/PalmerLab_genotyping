@@ -1,5 +1,18 @@
 -- !preview conn=DBI::dbConnect(RSQLite::SQLite())
 
+---
+-- to fix the u01 hs rats metadata 
+select * from u01_peter_kalivas_us.wfu_master t
+left join metadata_hsrats_corrected m ON t.rfid = m.rfid
+where t.sires <> m.sires or t.dames <> m.dames;
+ 
+UPDATE u01_peter_kalivas_us.wfu_master
+SET dames = m.dames, 
+sires = m.sires
+FROM metadata_hsrats_corrected m 
+WHERE m.rfid = u01_peter_kalivas_us.wfu_master.rfid; 
+
+
 --- 
 select schema, count(*) from (select 'u01_tom_jhou' as schema, sires, dames, accessid, sex from u01_tom_jhou.wfu_master
 union all

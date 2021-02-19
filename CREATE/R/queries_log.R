@@ -1,4 +1,77 @@
 ## data queries
+# sample metadata for kn05
+
+# extract khai's riptide libraries to make sure that the metadata is stored correctly (don't need to, straight copy and paste)
+# join zebrafish excel and gdna excel to flowcell
+# compare to other sample metadata and make sure columns are in order
+# send gh dataframe to Riyan 
+
+kn05_df %>%
+  select(-sample_id, -project_name) %>% 
+  select(rfid, everything()) %>% 
+  mutate_all(as.character) %>% 
+  mutate(rfid = gsub("20200617", "20200616", rfid)) %>% 
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/zebrafish_larvae_n6580_phenotypes.csv") %>% 
+              mutate(dna_collected_y_n = replace(dna_collected_y_n, rfid == "20200616_Plate2_9A", "N")) %>% 
+              mutate_all(as.character) %>% 
+              mutate(project_name = "r01_su_guo_larvae") %>% 
+              select(rfid, dna_collected_y_n, mother, father, project_name), by = "rfid") %>% 
+  left_join(akil_gdna_df %>% select(rfid = sample_id, sex, project_name), by = "rfid") %>% 
+  mutate(project_name = coalesce(project_name.x, project_name.y)) %>% 
+  select(-matches("[.][xy]$")) %>% 
+  left_join(openxlsx::read.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Zebrafish/CREATE/gh_classification_n147.xlsx") %>% 
+              mutate(rfid = gsub("-", "_", rfid)) %>% 
+              select(rfid, gh_cat), by = "rfid") %>% 
+  mutate(comments = coalesce(comments, gh_cat)) %>% # since gh cat and comments are mutually exclusive, you can coalesce
+  mutate(project_name = replace(project_name, grepl("casper", comments), "r01_su_guo_larvae")) %>% 
+  mutate(original_rfid = rfid) %>% 
+  mutate(original_rfid = gsub("20200616", "20200617", original_rfid)) %>%
+  rename("library_name" = "library") %>% 
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/fastq_seq05_filenames.csv") %>%
+              separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+              mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+                     file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+              distinct(runid, file) %>% 
+              mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% 
+              mutate(file = gsub("^(4[1-9]|50)", "R\\1", file)) %>% subset(grepl("^R\\d+", file)) %>% 
+              mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
+                     pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+              select(-file), by = c("library_name", "pcr_barcode")) %>% 
+  mutate(strain = case_when(grepl("akil", project_name) ~ "Sprague Dawley",
+    grepl("guo", project_name)&!grepl("casper", comments) ~ "Ekkwill fish",
+    grepl("guo", project_name)&grepl("casper", comments) ~ "Casper",
+    TRUE ~ NA_character_),
+    organism = ifelse(grepl("guo", project_name), "zebrafish", "rat")) %>% 
+  mutate(rfid = gsub(" ", "", rfid)) %>% 
+  mutate(flag = NA,
+         coatcolor = NA,
+         filename = "2021-01-21-Flowcell Sample-Barcode list (KN05 Pool).xlsx") %>% 
+  # subset(is.na(project_name)) # for now, including casper as r01_su_guo_larvae
+  select(rfid, original_rfid, father, mother, runid, fastq_files, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain) %>% 
+write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", row.names = F)
+
+
+
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_hsrats_n1536_corrected_v2.csv") %>% mutate_all(as.character) %>% 
+  bind_rows(  read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_hs_parents_n376.csv") %>% mutate_all(as.character) ) %>% 
+  write.csv("~/Desktop/Database/csv files/sample_tracking/metadata_hsrats_n1912.csv", row.names = F)
+
+
+## find samples in database 
+
+khai_tissueextraction_df_join %>% subset(rfid %in% c("00077E76C6",
+"00078A19B7",
+"00078A2315",
+"00078A18A7",
+"00078A01A6",
+"00078A193E",
+"00078A17A7",
+"00077E67B5",
+"00077E76FE",
+"00078A02CB")) # did not find (these are Milad's samples )
+
+
+
 ## to reextract
 reextract_01 <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/genotype_log.csv", sep = ";") %>% 
   mutate_all(as.character) %>% 

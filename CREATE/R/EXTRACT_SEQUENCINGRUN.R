@@ -46,38 +46,36 @@ sequencing_run_log_IGM_df <- sequencing_run_log_IGM %>%
   separate_rows(library_name, sep = ",") %>% 
   mutate_at(vars(matches("library_")), str_trim) %>% # remove leading and trailing whitespace from string
   mutate_at(vars(matches("library_")), str_squish) %>% # remove repeated whitespace inside string
-  left_join(., library_project_name, by = c("library_name" = "riptide_plate_number")) %>% 
-  separate_rows(project_name, sep=c(","))  %>% # create separate rows for each plate
-  rowwise() %>% 
-  mutate(project_name = replace(project_name, is.na(project_name), case_when(
-      grepl("umich", library_name, ignore.case = T) ~ "u01_huda_akil",
-      grepl("zebrafish", library_name, ignore.case = T) ~ "r01_su_guo",
-      grepl("Mortazavi-Sebat HS", project, ignore.case = T) ~ "u01_gymrek_sebat", 
-      TRUE ~ "NA"
-    )
-  )) %>% # include the schema names
+  # left_join(., library_project_name, by = c("library_name" = "riptide_plate_number")) %>% 
+  # separate_rows(project_name, sep=c(","))  %>% # create separate rows for each plate
+  # rowwise() %>% 
+  # mutate(project_name = replace(project_name, is.na(project_name), case_when(
+  #     grepl("umich", library_name, ignore.case = T) ~ "u01_huda_akil_f2",
+  #     grepl("zebrafish", library_name, ignore.case = T)&grepl("breeder", library_name, ignore.case = T) ~ "r01_su_guo_breeder",
+  #     grepl("Mortazavi-Sebat HS", project, ignore.case = T) ~ "u01_gymrek_sebat", 
+  #     TRUE ~ "NA"
+  #   )
+  # )) %>% # include the schema names
   ungroup() %>% 
   mutate(full_run_id = gsub("/", "", full_run_id)) %>% 
   rowwise() %>% 
-  mutate(library_name = replace(library_name, !grepl("Riptide", library_name)&grepl("KN", project_details), paste("Riptide", library_name))) %>% 
+  mutate(library_name = replace(library_name, !grepl("Riptide", library_name)&grepl("KN", project_details), paste0("Riptide", library_name))) %>% 
+  mutate(library_name = ifelse(grepl("^Riptide", library_name), gsub(" ", "", library_name), library_name)) %>% 
   ungroup()
 
-# save object temporarily for apurva's review 06/09/2020 # 01/13/2021
-setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Processed")
-sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.xlsx")
-sequencing_run_log_IGM_df %>% openxlsx::write.xlsx(file = "sequencing_run_log_IGM_df.csv", row.names = F)
 
 # CREATE SEQUENCING RUN LOG
 sequencing_run_log <- sequencing_run_log_IGM_df %>% 
+  tail(-102) %>% 
   mutate(sequencing_facility_name = "IGM") %>%  # placeholder XX 07/23/2020
-  naniar::replace_with_na_all(~.x %in% c("", "\"\"", "NA", "N/A")) %>% 
-  subset(!is.na(project_name)) %>% 
-  subset(library_name != "zebrafish") ## XX temporary, waiting for oksana to update me about the zebrafish names
+  naniar::replace_with_na_all(~.x %in% c("", "\"\"", "NA", "N/A")) 
+# %>% 
+#   subset(!is.na(project_name)) %>% 
+#   subset(library_name != "zebrafish") ## XX temporary, waiting for oksana to update me about the zebrafish names
+# 
+sequencing_run_log %>% get_dupes(date_samples_submitted, full_run_id, library_name)
 
-sequencing_run_log %>% get_dupes(date_samples_submitted, library_name, project_name)
-
-setwd("~/Desktop/Database/csv files/sample_tracking")
-write.csv(sequencing_run_log, "sequencing_run_log.csv", row.names = F)
+write.csv(sequencing_run_log, "~/Desktop/Database/csv files/sample_tracking/sequencing_run_log.csv", row.names = F)
 
 
 

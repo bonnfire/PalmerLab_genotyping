@@ -193,7 +193,7 @@ kn04_df %>%
 
 ## kn05 
 
-kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) ID.xlsx")[[1]] %>% 
+kn05_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/Flowcell Sample-Barcode List/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool).xlsx")[[1]] %>% 
   clean_names() %>% 
   mutate(rfid = sample_id) %>% 
   rowwise() %>% 

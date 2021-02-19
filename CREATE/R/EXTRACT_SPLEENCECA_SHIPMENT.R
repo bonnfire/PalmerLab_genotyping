@@ -314,7 +314,21 @@ jerry_shipments_df <- jerry_shipments %>%
 # extract number of tissues sent to us? 02/04/2021
 
 jerry_shipments_2 <- read_excel("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues/RatSampleCollection_Batch19_NY-Ishiwari_12-29Jan2021.xlsx", col_names = F)
-  
+names(jerry_shipments_2) <- jerry_shipments_2[2, ] %>% unlist() %>% as.character
+jerry_shipments_2 <- jerry_shipments_2 %>% clean_names()
+
+# keep on the side for data dictionary 
+jerry_shipments_2_dictionary <- jerry_shipments_2[1:2,] %>% t()
+names(jerry_shipments_2_dictionary) <- c("varname_long", "varname_abv")
+
+jerry_shipments_2 <- jerry_shipments_2[-c(1:2),]
+
+jerry_shipments_2_df <- jerry_shipments_2 %>%
+  rename("rfid" = "rat_rfid") %>% 
+  mutate(datetime_dissected = openxlsx::convertToDate(as.numeric(datetime_dissected)) %>% as.character) %>% 
+  select(matches("rfid|date|box")) %>% 
+  gather(tissue, shipping_box, cecum_box:baculum_box) %>% 
+  mutate(tissue_type = gsub("_box", "", tissue))
 
 #################################################
 ###### ALL SPLEENS DELIVERED FOR EXTRACTION #####
