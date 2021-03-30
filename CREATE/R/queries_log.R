@@ -39,7 +39,7 @@ kn05_df %>%
               select(-file), by = c("library_name", "pcr_barcode")) %>% 
   mutate(strain = case_when(grepl("akil", project_name) ~ "Sprague Dawley",
     grepl("guo", project_name)&!grepl("casper", comments) ~ "Ekkwill fish",
-    grepl("guo", project_name)&grepl("casper", comments) ~ "Casper",
+    grepl("guo", project_name)&grepl("casper", comments) ~ "AB line",
     TRUE ~ NA_character_),
     organism = ifelse(grepl("guo", project_name), "zebrafish", "rat")) %>% 
   mutate(rfid = gsub(" ", "", rfid)) %>% 
@@ -47,7 +47,7 @@ kn05_df %>%
          coatcolor = NA,
          filename = "2021-01-21-Flowcell Sample-Barcode list (KN05 Pool).xlsx") %>% 
   # subset(is.na(project_name)) # for now, including casper as r01_su_guo_larvae
-  select(rfid, original_rfid, father, mother, runid, fastq_files, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain) %>% 
+  select(rfid, original_rfid, father, mother, runid, fastq_files, library_name, pcr_barcode, project_name, barcode, filename, comments, flag, sex, coatcolor, organism, strain) %>% 
 write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", row.names = F)
 
 

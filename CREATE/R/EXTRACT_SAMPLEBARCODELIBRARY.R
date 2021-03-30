@@ -222,6 +222,50 @@ kn05_df %>%
   mutate_all(as.character) %>% 
   write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) ID.xlsx")
 
+# for sample tracking sample barcode lib
+kn05_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+
+
+
+
+## kn06
+
+kn06_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/Flowcell Sample-Barcode List/2021-03-23-Flowcell Sample-Barcode list (KN06 Pool).xlsx")[[1]] %>% 
+  clean_names() %>% 
+  mutate(rfid = sample_id) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("^\\d{9}$", sample_id), paste0("933000", sample_id)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("-", "_", rfid),
+         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid))) %>% 
+  ungroup()
+
+kn06_df <- kn06_xl %>%
+  # select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
+  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_03242021.csv",colClasses = "character") %>% 
+              select(rfid, project_name) %>% 
+              bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n384.csv",colClasses = "character") %>% 
+                          select("rfid" = sample_id, rat_unique_id, project_name) ) %>% 
+              bind_rows(read.csv( "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues/Fw _Tissue_dissection_table_and_storage_/spleens_c17_18_n134.csv",colClasses = "character")), by = "rfid") %>% 
+  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo")) %>%   # after verifying that the other libraries are all Plate id fish 
+  rowwise() %>% 
+  mutate(sample_id = replace(sample_id, project_name == "u01_huda_akil_sd", rat_unique_id)) %>% 
+  ungroup()
+
+kn06_df %>% subset(is.na(project_name)) %>% select(sample_id) %>% unlist() %>% cat(sep = ", ")
+
+# generate sample barcode lib for Khai to submit
+kn06_df %>%
+  select(-sample_id, -project_name) %>% 
+  select(rfid, everything()) %>% 
+  rename("sample_id" = "rfid") %>% 
+  mutate_all(as.character) %>% 
+  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-01-21-Flowcell Sample-Barcode list (kn06 Pool) ID.xlsx")
+
+# for sample tracking sample barcode lib
+kn06_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn06_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+
+
 
 
 

@@ -104,37 +104,6 @@ khai_tissueextraction_df_join <- khai_tissueextraction_df %>% bind_rows(ucsf_zeb
 ## XX re-investigate this after conference 10/19/2020
 khai_tissueextraction_df_join %>% mutate(project_name = replace(project_name, grepl("Plate", rfid)|rfid %in% ucsf_zebrafish$rfid|grepl("^Z26", rfid), "r01_su_guo")) %>% subset(is.na(project_name)) %>% View()
 
-# separate the joining to prevent needing to compile all shipment data from other u01s and p50 to generate project specific data
-# khai_tissueextraction_df_join <- khai_tissueextraction_df %>% 
-#   left_join(., olivier_spleens_df[, c("experiment", "rfid")], by = "rfid") %>% # to account for the naive animals
-#   left_join(., shipments_df[, c("rfid", "u01")], by = c("rfid")) %>% 
-#   mutate(comments = replace(comments, grepl("Coc", experiment)&grepl("Oxy", u01)|grepl("Oxy", experiment)&grepl("Co", u01), "naive replacement"), 
-#          u01 = replace(u01, grepl("Coc", experiment)&!grepl("Co", u01), "Olivier_Oxy"),
-#          u01 = replace(u01, grepl("Ox", experiment)&!grepl("Ox", u01), "Olivier_Co")) %>% 
-#   rowwise() %>% 
-#   mutate(rfid = replace(rfid, grepl("933000", rfid)&is.na(u01), transponder)) %>% 
-#   select(-c("u01", "experiment")) %>% 
-#   left_join(., shipments_df[, c("rfid","u01")], by = c("rfid")) %>% 
-#   left_join(., shipments_p50_df[, c("rfid","p50")], by = c("rfid")) %>% 
-#   ungroup() %>% 
-#   mutate(dna_plate_code = replace(dna_plate_code, dna_plate_code == "1580526300", "Plate 1(FC20200305)")) %>% 
-#   mutate(
-#     project_name = case_when(
-#       grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
-#       grepl("Plate", rfid) ~ "r01_su_guo",
-#       grepl("Plate", dna_plate_code) ~ "r01_su_guo",
-#       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
-#       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
-#       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-#       grepl("Jhou", u01) ~ "u01_tom_jhou",
-#       grepl("Kalivas$", u01) ~ "u01_peter_kalivas_us",
-#       grepl("Kalivas_Italy", u01) ~ "u01_peter_kalivas_italy",
-#       grepl("Chen", p50) ~ "p50_hao_chen",
-#       grepl("Richards", p50) ~ "p50_jerry_richards",
-#       grepl("Meyer", p50) ~ "p50_paul_meyer",
-#       TRUE ~ "NA"
-#     )
-#   )
 
 ## CREATE LIBRARY, PROJECT_NAME FOR SEQUENCING RUN
 library_project_name <- khai_tissueextraction_df_join %>% 
@@ -154,57 +123,23 @@ extraction_log <- khai_tissueextraction_df_join %>%
 setwd("~/Desktop/Database/csv files")
 write.csv(extraction_log, file = "extraction_log.csv", row.names = F)
 
-
-## XX 
-## get the constraint columns from the db into table
-## DBI::
-## subset filter out the id's that already exist and have a library
-## create new csv file
-## basic qc -- no dupes and dim, no missing values in not null columns, check anti join bw table and sample metadata (check for typos)
-## copy csv into the db
-
-
-## XX add the constraints from the contraints document into the db
-
-
-# khai_spleenextraction_df_fordb <- khai_spleenextraction_df %>%
-#   mutate(
-#     project_name = case_when(
-#       grepl("p\\.cal", rfid) ~ "pcal_brian_trainor",
-#       grepl("Plate", rfid) ~ "r01_su_guo",
-#       grepl("Plate", dna_plate_code) ~ "r01_su_guo",
-#       grepl("Olivier_Oxy", u01) ~ "u01_olivier_george_oxycodone",
-#       grepl("Olivier_Co", u01) ~ "u01_olivier_george_cocaine",
-#       grepl("Mitchell", u01) ~ "u01_suzanne_mitchell",
-#       grepl("Jhou", u01) ~ "u01_tom_jhou",
-#       grepl("Kalivas", u01) ~ "u01_peter_kalivas_us",
-#       grepl("Chen", p50) ~ "p50_hao_chen", 
-#       grepl("Richards", p50) ~ "p50_jerry_richards", 
-#       grepl("Meyer", p50) ~ "p50_paul_meyer", 
-#       TRUE ~ "NA"
-#     )
-#   ) %>%   # for the animals for which we don't have shipment info for
-#   naniar::replace_with_na_all(condition = ~ .x %in% c("NA", "N/A", "None")) %>% 
-#   select(-one_of("u01", "p50", "v1", "v2"))
-# 
-# 
-# con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
-# dbWriteTable(con, c("sample_tracking","extraction_log"), value = khai_spleenextraction_df_fordb, row.names = FALSE)
-# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD PRIMARY KEY(rfid,project_name)")
-# dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD UNIQUE(dna_plate_code,rfid,well)")
-# # run when combined_master_table is complete
-# # dbExecute(con,"ALTER TABLE sample_tracking.extraction_log ADD FOREIGN KEY(rfid) REFERENCES sample_tracking.combined_master_table(rfid)")
-
-
-
-## in terminal
-cd /tmp
-sudo su postgres
-pg_dump -d PalmerLab_Datasets -t sample_tracking.extraction_log > extraction_log.sql
-exit
-cp extraction_log.sql /home/bonnie/Dropbox\ \(Palmer\ Lab\)/PalmerLab_Datasets/sample_tracking
-
-
+# temporary
+extraction_log_n6729 <- khai_tissueextraction_df_join %>%
+  select_if(~sum(!is.na(.)) > 0) %>% 
+  select(-matches("x(1[89])|x2[0-2]$|u01|p50|^e$")) %>% 
+  mutate(project_name = replace(project_name, project_name == "r01_su_guo", "r01_su_guo_larvae")) %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), gsub("-","_",rfid))) %>% 
+  mutate(rfid = replace(rfid, is.na(project_name)&grepl("Plate", rfid), sample_id_barcode)) %>% 
+  mutate(rfid = gsub(" ", "", rfid)) %>% 
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), gsub("_(\\D)(\\d+)$", "_\\2\\1", rfid)),
+         project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo_larvae")) %>% 
+  ungroup() %>% 
+  subset(rfid != "NULL") %>% 
+  subset(!is.na(project_name)&comments != "Imported from nanodrop zebrafish results 12-5-19 file") %>%  ## XX return to these cases 03/01/2021 
+  mutate(comments = ifelse(grepl("20200617", rfid), "processed and sequenced as 20200617, but phenotyping center uses 20200616", comments),
+    rfid = gsub("20200617", "20200616", rfid))
+write.csv(extraction_log_n6729, file = "~/Desktop/Database/csv files/sample_tracking/temp_extraction_log.csv", row.names = F)
 
 
 
@@ -219,66 +154,6 @@ library_riptide <- flipAPI::DownloadXLSX("https://www.dropbox.com/s/hq4g4fw4irub
   
 ## full run id and project_name primary key 
 
-
-
-
-
-
-
-
-
-
-
-
-########################### 
-# HANNAH EXTRACTION TABLE #
-###########################
-
-## NONE OF THESE ARE OVERLAPPING WITH THE RIPTIDE ONES 
-extractions_hannah_df <- lapply(extractions_hannah_original, function(x){
-  x <- x %>% mutate_at(vars(contains('Date')), ~lubridate::ymd(.))
-  return(x)
-}) %>% rbindlist(fill = T, use.names = T) 
-names(extractions_hannah_df) <- mgsub::mgsub(tolower(names(extractions_hannah_df)), 
-                                           c("[#]", "[[:space:]]|[.]|[[:punct:]]$", "[[:punct:]]"), 
-                                           c("num", "", "_"))
-
-extractions_hannah_df <- extractions_hannah_df %>% 
-  mutate(sampleid_barcode = coalesce(sampleid, sampleid_barcode)) %>% 
-  select(-sampleid)
-
-extractions_hannah_df %>% 
-  subset(sampleid_barcode %in% flow_cell_original_rip$`Sample ID`) %>% 
-  dim()
-
-## library in flow cell "Riptide-"01 to 03 seem to be line with the "Olivier"01-03 counts
-
-
-
-
-#### KHAI DNA EXTRACTION USING THE FLIPAPI
-
-names(khai_spleenextraction_df) <- mgsub::mgsub(tolower(names(khai_spleenextraction_df)), 
-                                           c("[#]", "[[:space:]]|[.]|[[:punct:]]$", "[[:punct:]]"), 
-                                           c("num", "", "_"))
-
-
-khai_spleenextraction_df <- khai_spleenextraction_df %>%
-  mutate_all(as.character) %>% 
-  mutate(rfid = paste0("933000", sampleid_barcode)) %>% 
-  mutate(u01_rfid_verified = case_when(
-    rfid %in%  WFU_OlivierCocaine_test_df$rfid ~ "u01_olivier_cocaine",
-    # rfid == "933000120117313" ~ "u01_olivier_cocaine",
-    rfid %in%  WFU_OlivierOxycodone_test_df$rfid ~ "u01_olivier_oxycodone",
-    rfid %in%  WFU_Jhou_test_df$rfid ~ "u01_jhou",
-    rfid %in%  WFU_Mitchell_test_df$rfid ~ "u01_mitchell",
-    TRUE ~ "NA")) %>% 
-  left_join(., shipments_df[,c("rfid", "cohort", "u01")], by = c("rfid")) %>% 
-  mutate(u01 = paste0(u01, "_", cohort)) %>% 
-  select(-cohort)
-
-# origin is not cohort
-# WFU_OlivierCocaine_test_df %>% subset(rfid %in% c("933000320047386", "933000320046848"))
 
 
 
@@ -336,7 +211,7 @@ ims %>%
 # load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/dna_extractions_celine.RData")
 
 
-## 01/05/2020 dnaextractions to troubleshoot missing extractions from projects olivier
+## 01/05/2021 dnaextractions to troubleshoot missing extractions from projects olivier
 
 khai_tissueextractionNames <- googlesheets4::sheet_names(
   googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)]
@@ -348,7 +223,7 @@ khai_tissueextraction_1_52 <- lapply(khai_tissueextractionNames[1:52], function(
 
 
 # clean for df 
-khai_tissueextraction_df_1_52 <- khai_tissueextraction_1_52 %>% 
+khai_tissueextraction_1_52_df <- khai_tissueextraction_1_52 %>% 
   lapply(., function(x){
     x %>%
       mutate_all(as.character)
@@ -371,27 +246,96 @@ khai_tissueextraction_df_1_52 <- khai_tissueextraction_1_52 %>%
   rowwise() %>% 
   mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
          rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294"), #fix the dupe rfid
-         rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid, ignore.case = T), gsub("_", "", rfid)),
          rfid = gsub(" ", "", rfid),
          rfid = gsub("20200617Plate", "20200616Plate", rfid)
   ) %>% ###
-  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("_", "-", rfid))),
-         rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d)$", "-\\2\\1", rfid)))) %>% 
-  # project_name = replace(project_name, grepl("Plate", rfid), "r01_su_guo")) %>% 
-  # mutate(rfid = replace(rfid, grepl("\\d+?_Plate\\d+?_", rfid), gsub("_", "", rfid)),
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("(\\D)(\\d+)$", "\\2\\1", rfid)))) %>% 
   mutate(riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
   ungroup() %>% 
-  distinct() %>% 
-  # left_join(sample_metadata[, c("rfid", "project_name")], by = "rfid") %>% 
-  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_metadata_rfidproject_10192020.csv") %>% mutate_all(as.character), by = "rfid") %>% 
-  left_join(., tissue_df[, c("rfid", "project_name")], by = "rfid") %>% # to account for the naive animals
-  mutate(project_name = coalesce(project_name.y, project_name.x)) %>% 
-  select(-matches("project_name[.][xy]")) %>% 
-  # subset(!(grepl("^000")&nchar(rfid) == 10)) ## XX temporarily remove these bc no metadata
-  # subset(dna_plate_code != "RiptideControl") %>%
-  # subset(!is.na(project_name)) %>% ## XX temporary until zebrafish get sorted out 
   distinct()
 
-khai_tissueextraction_df_1_52 %>% 
-  select(rfid, project_name) %>% 
-  select(project_name) %>% table(exclude = NULL)
+khai_tissueextraction_1_52_df <- khai_tissueextraction_1_52_df %>% 
+  select_if(~sum(!is.na(.)) > 0) %>% 
+  select(-matches("x(1[89])|x2[0-2]$|^e$")) %>% 
+  subset(rfid != "NULL") %>% 
+  mutate(comments = ifelse(grepl("20200617", rfid), "processed and sequenced as 20200617, but phenotyping center uses 20200616", comments),
+         rfid = gsub("20200617", "20200616", rfid)) %>% 
+  mutate(rfid = gsub("-", "_", rfid))
+
+khai_tissueextraction_1_52_df <- khai_tissueextraction_1_52_df %>% 
+  select(dna_plate_code, plate_barcode, well, transponder, sample_id_barcode, user_id, date, nanodrop_ng_u_l, x260_280, x260_230, origin, no, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments, riptide_plate_number, storage_box_of_extracted_dna_plate, location_of_extracted_dna_plate_box, number_written_on_the_top_of_tube, rfid) %>% 
+  distinct() %>% 
+  mutate(project_name = "NA") %>% # fill in with sql db
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("Akil", dna_plate_code, ignore.case = T), transponder)) %>% ## using phenotyping center initiative
+  ungroup() %>% 
+  subset(dna_plate_code != "RiptideControl")
+
+khai_tissueextraction_53_96 <- lapply(khai_tissueextractionNames[53:96], function(x){             
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
+}) # extract all sheets in this workbook
+
+khai_tissueextraction_53_96_df <- khai_tissueextraction_53_96 %>% 
+  lapply(., function(x){
+  x %>%
+    mutate_all(as.character)
+}) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  subset(is.na(akil_lab_g_dna_from_sprague_dawley_outbred_rats_number_37_422)) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
+  mutate(rfid = ifelse(
+    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+    paste0("933000", sample_id_barcode),
+    ifelse(
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+      paste0("93300", sample_id_barcode),
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode) & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+             sample_id_barcode, sample_id_barcode)
+    ) 
+  )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
+         rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294"), #fix the dupe rfid
+         rfid = gsub(" ", "", rfid)
+  ) %>% ###
+  mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-(\\D)(\\d+)$", "-\\2\\1", rfid))),
+         rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("-", "_", rfid)))) %>% 
+  mutate(riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
+  ungroup() %>% 
+  mutate(location_of_extracted_dna_plate_box = "NA",
+         number_written_on_the_top_of_tube = "NA") %>% # temporary placeholder XX 03/02/2021
+  select(dna_plate_code, plate_barcode, well, transponder, sample_id_barcode, user_id, date, nanodrop_ng_u_l, x260_280, x260_230, origin, no, storage_box_of_spleen, freezer_location_of_tissue, position_in_box, comments, riptide_plate_number, storage_box_of_extracted_dna_plate, location_of_extracted_dna_plate_box, number_written_on_the_top_of_tube, rfid) %>% 
+  distinct() %>% 
+  mutate(project_name = "NA") %>% 
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("Akil", dna_plate_code, ignore.case = T), transponder)) %>% ## using phenotyping center initiative
+  subset(!(grepl("Plate", rfid)&is.na(plate_barcode))) %>% 
+  ungroup() %>%  # fill in with sql db
+  mutate(rfid = replace(rfid, well == "F10" & dna_plate_code == "Jhou05", "933000320187063")) %>% 
+  subset(rfid != "NULL")
+  
+## 03/02/2021 come back to this 
+khai_tissueextraction_53_96_df_db <- khai_tissueextraction_53_96_df %>% 
+  subset(!is.na(riptide_plate_number)) %>% 
+  subset(!(grepl("Hao", dna_plate_code)&grepl("TN", origin)))
+
+khai_tissueextraction_53_96_df %>% 
+  subset(is.na(riptide_plate_number)) %>% select(dna_plate_code) %>% rowwise() %>% mutate(project = "NA", 
+                                                                                          project = case_when(grepl("Plate", dna_plate_code) ~ "larvae",
+                                                                                            grepl("Jhou", dna_plate_code) ~ "jhou", 
+                                                                                            grepl("Kalivas", dna_plate_code) ~ "kalivas_us", 
+                                                                                            grepl("Redo", dna_plate_code) ~ "redos", 
+                                                                                            TRUE ~ NA_character_)) %>% ungroup()%>% select(project) %>% table()
+
+
+# clean up akil sheet
+khai_tissueextraction_53_96 %>% 
+  lapply(., function(x){
+    x %>%
+      mutate_all(as.character)
+  }) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  subset(!is.na(akil_lab_g_dna_from_sprague_dawley_outbred_rats_number_37_422))
