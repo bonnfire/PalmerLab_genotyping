@@ -1,4 +1,25 @@
 ## data queries
+
+## update database with all fastq files 
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", colClasses = "character") %>% distinct(rfid, fastq_files, filename) %>% 
+  rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", colClasses = "character") %>% 
+          distinct(rfid, fastq_files, filename)) %>% 
+  rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_kn03_n960.csv", colClasses = "character") %>% 
+          distinct(rfid, fastq_files, filename)) %>%
+  rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn02_fastq_sample_metadata_n960.csv", colClasses = "character") %>% 
+          distinct(rfid, fastq_files, filename)) %>% 
+  rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_flowcell1_n960.csv", colClasses = "character") %>% 
+          distinct(rfid, fastq_files, filename)) %>% 
+  rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_flowcell2_n571.csv", colClasses = "character") %>% 
+          distinct(rfid, fastq_files, filename)) %>% 
+  mutate(rfid = gsub(" ", "", rfid),
+         rfid = gsub("-", "_", rfid),
+         rfid = gsub("(\\D)(\\d+)$", "\\2\\1", rfid)) %>% 
+  write.csv("~/Desktop/Database/csv files/sample_tracking/sample_tracking_fastq_temp_n5363.csv",row.names = F)
+
+# %>% 
+  # select(filename) %>% table()
+
 # sample metadata for kn05
 
 # extract khai's riptide libraries to make sure that the metadata is stored correctly (don't need to, straight copy and paste)
