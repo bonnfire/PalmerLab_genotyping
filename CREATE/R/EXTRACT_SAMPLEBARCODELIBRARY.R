@@ -237,12 +237,13 @@ kn06_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Se
   mutate(rfid = replace(rfid, grepl("^\\d{9}$", sample_id), paste0("933000", sample_id)),
          rfid = gsub(" ", "", rfid),
          rfid = gsub("-", "_", rfid),
-         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid))) %>% 
+         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid)),
+         rfid = replace(rfid, grepl("^CC1", rfid), gsub("^CC", "", rfid))) %>% 
   ungroup()
 
 kn06_df <- kn06_xl %>%
   # select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
-  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_03242021.csv",colClasses = "character") %>% 
+  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_04082021.csv",colClasses = "character") %>% 
               select(rfid, project_name) %>% 
               bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n384.csv",colClasses = "character") %>% 
                           select("rfid" = sample_id, rat_unique_id, project_name) ) %>% 
@@ -260,7 +261,7 @@ kn06_df %>%
   select(rfid, everything()) %>% 
   rename("sample_id" = "rfid") %>% 
   mutate_all(as.character) %>% 
-  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-01-21-Flowcell Sample-Barcode list (kn06 Pool) ID.xlsx")
+  write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-03-23-Flowcell Sample-Barcode list (KN06 Pool) ID.xlsx")
 
 # for sample tracking sample barcode lib
 kn06_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn06_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)

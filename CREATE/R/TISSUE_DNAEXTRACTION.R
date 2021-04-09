@@ -347,16 +347,7 @@ khai_tissueextraction_53_101_df_db <- khai_tissueextraction_53_101_df %>%
 khai_tissueextraction_53_101_df_db_temp <- khai_tissueextraction_53_101_df_db %>% 
   subset(!(grepl("Hao", dna_plate_code)&grepl("TN", origin)))
 
-
-khai_tissueextraction_53_101_df_db_temp %>% 
-  subset(rfid == "CC1DCD1790")
-khai_tissueextraction_53_101_df_db_temp %>% 
-  subset(rfid == "U195")
-
-
-khai_tissueextraction_53_101_df_db %>% 
-  subset(rfid == "1DCD2048") %>% View()
-
+khai_tissueextraction_53_101_df %>% subset(is.na(riptide_plate_number)) %>% select(-project_name) %>% left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_03242021.csv", colClasses = "character"), by = "rfid") %>% subset(grepl("mitchell", project_name)) %>% left_join(read.xlsx("~/Downloads/Shipment6_Shipping_Content_Lists.xlsx") %>% mutate(ship = "6") %>% rbind(read.xlsx("~/Downloads/Shipment5_Shipping_Content_Lists.xlsx") %>% mutate(ship = "5")) %>% mutate(ID = as.character(ID)) , by = c( "rfid" = "ID")) %>% select(ship) %>% table(exclude = NULL)
 
 # animals that are in queue to be extracted 
 khai_tissueextraction_53_101_df %>% 

@@ -1,21 +1,28 @@
 ## data queries
 
 ## update database with all fastq files 
-read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", colClasses = "character") %>% distinct(rfid, fastq_files, filename) %>% 
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", colClasses = "character") %>% distinct(rfid, fastq_files, filename, project_name) %>% 
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", colClasses = "character") %>% 
-          distinct(rfid, fastq_files, filename)) %>% 
+          distinct(rfid, fastq_files, filename, project_name)) %>% 
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_kn03_n960.csv", colClasses = "character") %>% 
-          distinct(rfid, fastq_files, filename)) %>%
+          distinct(rfid, fastq_files, filename, project_name)) %>%
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn02_fastq_sample_metadata_n960.csv", colClasses = "character") %>% 
-          distinct(rfid, fastq_files, filename)) %>% 
+          distinct(rfid, fastq_files, filename, project_name)) %>% 
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_flowcell1_n960.csv", colClasses = "character") %>% 
-          distinct(rfid, fastq_files, filename)) %>% 
+          distinct(rfid, fastq_files, filename, project_name)) %>% 
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/sample_barcode_lib_idconversion_flowcell2_n571.csv", colClasses = "character") %>% 
-          distinct(rfid, fastq_files, filename)) %>% 
-  mutate(rfid = gsub(" ", "", rfid),
+          distinct(rfid, fastq_files, filename, project_name)) %>% 
+  mutate(rfid = ifelse(!(grepl("Casper|^2622", rfid)&(project_name == "r01_su_guo")), gsub(" ", "", rfid), rfid),
          rfid = gsub("-", "_", rfid),
-         rfid = gsub("(\\D)(\\d+)$", "\\2\\1", rfid)) %>% 
+         rfid = ifelse(grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid), rfid)) %>%
+  select(-project_name) %>% 
   write.csv("~/Desktop/Database/csv files/sample_tracking/sample_tracking_fastq_temp_n5363.csv",row.names = F)
+
+read.csv("~/Desktop/Database/csv files/snapshots/sample_barcode_lib_03302021.csv", colClasses = "character") %>% 
+  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_03242021.csv", colClasses = "character"), by = c("rfid")) %>% 
+  subset(is.na(strain))
+  naniar::vis_miss()
+
 
 # %>% 
   # select(filename) %>% table()

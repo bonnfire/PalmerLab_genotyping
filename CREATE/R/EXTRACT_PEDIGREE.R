@@ -6,7 +6,8 @@ old_pedigree <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/Pa
   mutate_all(as.character)
 old_pedigree %>% get_dupes(id)
 
-old_pedigree %>% subset(!(sire %in% pedigree_03292021_fix$sw_id)&!is.na(sire)) %>% dim
+old_pedigree %>% subset(!(sire %in% pedigree_03292021_fix$sw_id)&!is.na(sire)&!grepl("^000", sire)) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/Misc Data/pedigree_toberesolved_n488.csv", row.names = F)
 old_pedigree %>% subset(dam %in% pedigree_03292021_fix$sw_id) %>% dim
 
 
