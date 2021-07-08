@@ -203,6 +203,7 @@ ims %>%
   subset(!is.na(location_of_extracted_dna_plate_box)) %>%  
   head(96) %>% 
   openxlsx::write.xlsx(file = "redo_ims_location_n96.xlsx")
+
 # %>% 
   # subset(is.na(location_of_extracted_dna_plate_box)) %>% 
   # left_join(sample_barcode_lib[ , c("library", "rfid")])
@@ -343,9 +344,13 @@ khai_tissueextraction_53_101_df_db <- khai_tissueextraction_53_101_df %>%
          rfid = replace(rfid, dna_plate_code == "Jhou05"&well == "E6"&rfid == "u191", "933000320046750"),
          rfid = replace(rfid, dna_plate_code == "Jhou06"&well == "D2", "933000320186902"))
 
+# upload the Hao data that were not previously uploaded
+khai_tissueextraction_53_101_df_db_upload <- khai_tissueextraction_53_101_df_db %>% subset(!(rfid %in% (read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.extraction_log_05042021_n5612.csv", stringsAsFactors = F) %>% 
+                                                                                               select(rfid) %>% unlist() %>% as.character)))
 
-khai_tissueextraction_53_101_df_db_temp <- khai_tissueextraction_53_101_df_db %>% 
-  subset(!(grepl("Hao", dna_plate_code)&grepl("TN", origin)))
+
+# khai_tissueextraction_53_101_df_db_temp <- khai_tissueextraction_53_101_df_db %>% 
+#   subset(!(grepl("Hao", dna_plate_code)&grepl("TN", origin)))
 
 khai_tissueextraction_53_101_df %>% subset(is.na(riptide_plate_number)) %>% select(-project_name) %>% left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_03242021.csv", colClasses = "character"), by = "rfid") %>% subset(grepl("mitchell", project_name)) %>% left_join(read.xlsx("~/Downloads/Shipment6_Shipping_Content_Lists.xlsx") %>% mutate(ship = "6") %>% rbind(read.xlsx("~/Downloads/Shipment5_Shipping_Content_Lists.xlsx") %>% mutate(ship = "5")) %>% mutate(ID = as.character(ID)) , by = c( "rfid" = "ID")) %>% select(ship) %>% table(exclude = NULL)
 
@@ -371,9 +376,56 @@ khai_tissueextraction_53_96 %>%
   subset(!is.na(akil_lab_g_dna_from_sprague_dawley_outbred_rats_number_37_422))
 
 
+
+
+
+
 ## remaining
 khai_tissueextractionNames <- googlesheets4::sheet_names(
   googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)]
 ) #extract the id code associated with the U01 Spleen&Fish Extraction Database 
 
 
+## khai_tissueextraction_106-106
+
+khai_tissueextraction_102_106 <- lapply(khai_tissueextractionNames[102:106], function(x){             
+  googlesheets4::range_read(googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)],sheet = x) 
+}) # extract all sheets in this workbook
+
+khai_tissueextraction_102_106_df <- khai_tissueextraction_102_106 %>% 
+  lapply(., function(x){
+    x %>%
+      mutate_all(as.character)
+  }) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  # subset(is.na(akil_lab_g_dna_from_sprague_dawley_outbred_rats_number_37_422)) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
+  mutate(rfid = ifelse(
+    grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+    paste0("933000", sample_id_barcode),
+    ifelse(
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+      paste0("93300", sample_id_barcode),
+      ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode) & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+             sample_id_barcode, sample_id_barcode)
+    ) 
+  )) 
+
+# which ones are in the queue
+khai_tissueextraction_102_106 %>% 
+  lapply(., function(x){
+    x %>%
+      mutate_all(as.character)
+  }) %>% 
+  rbindlist(fill = T) %>% 
+  clean_names %>% 
+  # subset(is.na(akil_lab_g_dna_from_sprague_dawley_outbred_rats_number_37_422)) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+  dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode))
+
+## upload the ones that have been made into libraries 
+khai_tissueextraction_102_106_df_db <- khai_tissueextraction_102_106_df %>% subset(!is.na(riptide_plate_number))
+
+khai_tissueextraction_102_106_df_db %>% naniar::vis_miss()

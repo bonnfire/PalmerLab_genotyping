@@ -1,5 +1,22 @@
 ## data queries
 
+## create sample metadata for kn07
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames.csv", stringsAsFactors = F) %>% 
+  separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+         file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+  distinct(runid, file) %>% 
+  mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% 
+  mutate(file = gsub("^(6[1-9]|70)", "R\\1", file)) %>% 
+  mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
+         pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+  select(-file) %>% 
+  subset(grepl("Riptide(6[1-9]|70)", library_name)) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames_processed.csv", row.names = F)
+  
+
+
+
 ## update database with all fastq files 
 read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv", colClasses = "character") %>% distinct(rfid, fastq_files, filename, project_name) %>% 
   rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/kn04_fastq_sample_metadata_n952.csv", colClasses = "character") %>% 
@@ -101,7 +118,7 @@ khai_tissueextraction_df_join %>% subset(rfid %in% c("00077E76C6",
 
 
 ## to reextract
-reextract_01 <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/genotype_log.csv", sep = ";") %>% 
+reextract_01 <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/received/genotype/genotype_log.csv", sep = ";") %>% 
   mutate_all(as.character) %>% 
   # rbind(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/genotype_log_933000320046318.csv", sep = ";") %>% mutate_all(as.character)) %>% 
   subset(QC_sex == "reject"|QC_missing == "reject"|QC_heterozygosity == "reject"|QC_coat_color_albino == "reject") %>% 

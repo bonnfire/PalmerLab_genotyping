@@ -223,7 +223,7 @@ kn05_df %>%
   write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-01-21-Flowcell Sample-Barcode list (KN05 Pool) ID.xlsx")
 
 # for sample tracking sample barcode lib
-kn05_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn05_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+kn05_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/metadata_kn05_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
 
 
 
@@ -245,15 +245,16 @@ kn06_df <- kn06_xl %>%
   # select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
   left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_04082021.csv",colClasses = "character") %>% 
               select(rfid, project_name) %>% 
-              bind_rows(read.csv("~/Desktop/Database/csv files/u01_huda_akil_sd/akil_gdna_n384.csv",colClasses = "character") %>% 
-                          select("rfid" = sample_id, rat_unique_id, project_name) ) %>% 
               bind_rows(read.csv( "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues/Fw _Tissue_dissection_table_and_storage_/spleens_c17_18_n134.csv",colClasses = "character")), by = "rfid") %>% 
-  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo")) %>%   # after verifying that the other libraries are all Plate id fish 
-  rowwise() %>% 
-  mutate(sample_id = replace(sample_id, project_name == "u01_huda_akil_sd", rat_unique_id)) %>% 
-  ungroup()
+  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))
+# %>%   # after verifying that the other libraries are all Plate id fish 
+  # rowwise() %>% 
+  # mutate(rfid = replace(rfid, project_name == "u01_huda_akil_sd", rat_unique_id)) %>% 
+  # ungroup()
 
 kn06_df %>% subset(is.na(project_name)) %>% select(sample_id) %>% unlist() %>% cat(sep = ", ")
+
+kn06_df %>% subset(is.na(project_name)) %>% select(rfid) %>% unlist() %>% cat(sep = ", ")
 
 # generate sample barcode lib for Khai to submit
 kn06_df %>%
@@ -264,9 +265,66 @@ kn06_df %>%
   write.xlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/flowcell_excels/2021-03-23-Flowcell Sample-Barcode list (KN06 Pool) ID.xlsx")
 
 # for sample tracking sample barcode lib
-kn06_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/metadata_kn06_n960.csv") %>% mutate_all(as.character) %>% select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+# kn06_db <-... %>%  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
+kn06_df %>% select(project_name) %>% table(exclude = NULL)
+
+kn06_df %>% distinct(rfid, project_name) %>% mutate(filename = "KN06") %>%  rbind(read.csv("~/Desktop/Database/csv files/snapshots/sample_barcode_lib_03302021.csv", colClasses = "character") %>% select(rfid, project_name, filename)) %>% head(3)
 
 
+
+## kn07
+kn07_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/Flowcell Sample-Barcode List/2021-05-27-Flowcell Sample-Barcode list (KN07 Pool).xlsx")[[1]] %>% 
+  clean_names() %>% 
+  mutate(rfid = sample_id) %>%
+  mutate(rfid = ifelse(grepl("^(003b|DD|BB)", rfid, ignore.case = T), toupper(rfid), rfid)) %>% ## make sure all ID's other than the su guo breeders and larvae are capitalized and uniform
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("^\\d{9}$", sample_id), paste0("933000", sample_id)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("-", "_", rfid),
+         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid)),
+         rfid = replace(rfid, grepl("^BB", rfid), gsub("^BB", "", rfid))) %>% # keep the prefixes in some places
+         # ,
+         # rfid = replace(rfid, grepl("^(\\D+)1", rfid), gsub("^(\\D+)", "", rfid))) %>% 
+  ungroup()
+
+kn07_df <- kn07_xl %>%
+  # select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
+  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_04082021.csv",colClasses = "character") %>% 
+              select(rfid, project_name) %>% 
+              bind_rows(read.csv("~/Desktop/Database/csv files/u01_suzanne_mitchell/mitchell_wfu_metadata_c06.csv", stringsAsFactors = F) %>% 
+                          mutate(rfid = as.character(rfid)) %>% mutate(project_name = "u01_suzanne_mitchell")) %>% select(rfid, project_name) %>% 
+              bind_rows(read.csv("~/Desktop/Database/csv files/p50_hao_chen_2020/chen_17_20_metadata.csv", stringsAsFactors = F) %>% 
+                          mutate(project_name = "p50_hao_chen_2020") %>% select(rfid, project_name)) %>% 
+              bind_rows(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/P50_Hao_Chen/breeders_3B9A_n20.csv", stringsAsFactors = F) %>% 
+                          select(rfid) %>% 
+                          mutate(rfid = gsub("(.*)", "00\\1", rfid), project_name = "p50_hao_chen_2020")), by = "rfid") %>% 
+  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))
+
+# check for dupes and na project names 
+kn07_df %>% get_dupes(rfid) %>% distinct(project_name)
+kn07_df %>% naniar::vis_miss()
+kn07_df %>% subset(is.na(project_name))
+
+# temp for Den
+kn07_df %>% select(rfid, project_name, library, barcode, pcr_barcode) %>% rename("library_name" = "library") %>% distinct() %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/kn07_metadata_rfid_lib_barcode.csv", row.names = F)
+
+# create for db 
+kn07_db <- kn07_df %>% 
+  rename("library_name" = "library") %>%
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>% 
+  mutate(filename = "2021-05-27-Flowcell Sample-Barcode list (KN07 Pool).xlsx",
+         flag = NA) %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>% 
+  distinct
+  
+# create the sample metadata file 
+kn07_db_metadata <- kn07_db %>% 
+  left_join() %>% 
+  select(everything(), father, mother, sex, coatcolor, organism, strain)
+
+
+kn07_db %>% subset(project_name == "r01_su_guo_breeders") %>% left_join(read.csv("~/Desktop/Database/csv files/sample_tracking/zebrafish_breeder_n350.csv", ))
 
 
 
@@ -274,6 +332,12 @@ kn06_db <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerL
 ## upload the pgdump file into the db
 
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
+dbListTables(con) 
+
+extractionlog <- dbGetQuery(con,"select * from \"sample_tracking\".\"extraction_log\"")
+head(extractionlog)
+
+
 dbWriteTable(con, c("sample_tracking","sample_barcode_library"), value = flowcell_df_fordb, row.names = FALSE)
 
 dbExecute(con,"ALTER TABLE sample_tracking.sample_barcode_library RENAME COLUMN \"sample_id_demul\" TO \"rfid\"")
