@@ -239,18 +239,18 @@ kn06_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Se
          rfid = gsub("-", "_", rfid),
          rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid)),
          rfid = replace(rfid, grepl("^CC1", rfid), gsub("^CC", "", rfid))) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(rfid = ifelse(rfid == "933000320187016"&barcode == "GATGCATC", "933000320187017", rfid),
+         rfid = ifelse(rfid == "DD1DCD20CA"&library == "Riptide55", "DD1DCD20A1", rfid))
 
 kn06_df <- kn06_xl %>%
-  # select(-rat_unique_id) %>% # conflicts w the rat unique id that huda sends 
-  left_join(read.csv("~/Desktop/Database/csv files/snapshots/sample_tracking.sample_metadata_04082021.csv",colClasses = "character") %>% 
-              select(rfid, project_name) %>% 
-              bind_rows(read.csv( "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/Tissues/Fw _Tissue_dissection_table_and_storage_/spleens_c17_18_n134.csv",colClasses = "character")), by = "rfid") %>% 
-  mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))
-# %>%   # after verifying that the other libraries are all Plate id fish 
-  # rowwise() %>% 
-  # mutate(rfid = replace(rfid, project_name == "u01_huda_akil_sd", rat_unique_id)) %>% 
-  # ungroup()
+  left_join(union_metadata, by = "rfid") %>% 
+  left_join(sample_metadata_strain, by = "rfid") %>%
+  left_join(sample_metadata_project, by = "rfid") %>% 
+  select(-schema) %>% 
+  mutate(project_name = ifelse(strain == "Sprague Dawley"&is.na(project_name), "u01_huda_akil_sd", 
+                         ifelse(strain == "AB line casper"&is.na(project_name), "r01_su_guo_larvae", project_name))) %>% 
+  distinct()
 
 kn06_df %>% subset(is.na(project_name)) %>% select(sample_id) %>% unlist() %>% cat(sep = ", ")
 
@@ -268,7 +268,45 @@ kn06_df %>%
 # kn06_db <-... %>%  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag)
 kn06_df %>% select(project_name) %>% table(exclude = NULL)
 
-kn06_df %>% distinct(rfid, project_name) %>% mutate(filename = "KN06") %>%  rbind(read.csv("~/Desktop/Database/csv files/snapshots/sample_barcode_lib_03302021.csv", colClasses = "character") %>% select(rfid, project_name, filename)) %>% head(3)
+
+# create for db 
+kn06_db <- kn06_df %>% 
+  rename("library_name" = "library") %>%
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn06_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>% 
+  mutate(filename = "2021-03-23-Flowcell Sample-Barcode list (KN06 Pool).xlsx",
+         flag = NA) %>% 
+  mutate(comments = ifelse(grepl("DD1DCD20A1", rfid), "Original RFID was DD1DCD20CA", comments),
+    flag = ifelse(grepl("DD1DCD20A1", rfid), "Suspect RFID", flag)) %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>%
+  distinct
+
+
+
+# create the sample metadata file 
+kn06_db_metadata <- kn06_df %>% 
+  rename("library_name" = "library") %>%
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn06_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>% 
+  mutate(filename = "2021-05-27-Flowcell Sample-Barcode list (kn06 Pool).xlsx",
+         flag = NA) %>% 
+  select(rfid, project_name, runid, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>% 
+  distinct %>% 
+  mutate(rfid = ifelse(grepl("^003B", rfid)&project_name == "p50_hao_chen_2020", gsub("^00", "", rfid), rfid)) %>% 
+  left_join(union_metadata, by = "rfid") %>% 
+  left_join(sample_metadata_strain, by = "rfid") %>% 
+  rename('father' = 'sires',
+         'mother' = 'dames') %>% 
+  select(-schema) %>% # use this as a check to see if any are missing 
+  select(everything(), father, mother, sex, coatcolor, organism, strain) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("", "NA", "-")) %>% 
+  distinct 
+
+# check if any are missing
+kn06_db_metadata %>% subset(is.na(project_name))
+kn06_db_metadata %>% naniar::vis_miss()
+kn06_db_metadata %>% get_dupes(rfid)
+
+
+
 
 
 
@@ -295,7 +333,7 @@ kn07_df <- kn07_xl %>%
                           mutate(rfid = as.character(rfid)) %>% mutate(project_name = "u01_suzanne_mitchell")) %>% select(rfid, project_name) %>% 
               bind_rows(read.csv("~/Desktop/Database/csv files/p50_hao_chen_2020/chen_17_20_metadata.csv", stringsAsFactors = F) %>% 
                           mutate(project_name = "p50_hao_chen_2020") %>% select(rfid, project_name)) %>% 
-              bind_rows(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/P50_Hao_Chen/breeders_3B9A_n20.csv", stringsAsFactors = F) %>% 
+              bind_rows(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/P50/P50_Hao_Chen/breeders_3B9A_n20.csv", stringsAsFactors = F) %>% ## add the 0's to join the breeders, remove for the database later
                           select(rfid) %>% 
                           mutate(rfid = gsub("(.*)", "00\\1", rfid), project_name = "p50_hao_chen_2020")), by = "rfid") %>% 
   mutate(project_name = replace(project_name, is.na(project_name)&grepl("Plate", rfid), "r01_su_guo"))
@@ -315,16 +353,126 @@ kn07_db <- kn07_df %>%
   left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>% 
   mutate(filename = "2021-05-27-Flowcell Sample-Barcode list (KN07 Pool).xlsx",
          flag = NA) %>% 
-  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>% 
+  mutate(rfid = ifelse(grepl("^003B", rfid)&project_name == "p50_hao_chen_2020", gsub("^00", "", rfid), rfid)) %>% 
+  select(rfid, project_name, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>%
   distinct
+
+
   
 # create the sample metadata file 
-kn07_db_metadata <- kn07_db %>% 
-  left_join() %>% 
-  select(everything(), father, mother, sex, coatcolor, organism, strain)
+kn07_db_metadata <- kn07_df %>% 
+  rename("library_name" = "library") %>%
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>% 
+  mutate(filename = "2021-05-27-Flowcell Sample-Barcode list (KN07 Pool).xlsx",
+         flag = NA) %>% 
+  select(rfid, project_name, runid, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>% 
+  distinct %>% 
+  mutate(rfid = ifelse(grepl("^003B", rfid)&project_name == "p50_hao_chen_2020", gsub("^00", "", rfid), rfid)) %>% 
+  left_join(union_metadata, by = "rfid") %>% 
+  left_join(sample_metadata_strain, by = "rfid") %>% 
+  rename('father' = 'sires',
+         'mother' = 'dames') %>% 
+  select(-project_name) %>% # use this as a check to see if any are missing 
+  rename("project_name" = "schema") %>% 
+  select(everything(), father, mother, sex, coatcolor, organism, strain) %>% 
+  naniar::replace_with_na_all(condition = ~.x %in% c("", "NA", "-")) 
+  
+# check if any are missing
+kn07_db_metadata %>% subset(is.na(project_name))
+kn07_db_metadata %>% naniar::vis_miss()
+kn07_db_metadata %>% get_dupes(rfid)
 
 
-kn07_db %>% subset(project_name == "r01_su_guo_breeders") %>% left_join(read.csv("~/Desktop/Database/csv files/sample_tracking/zebrafish_breeder_n350.csv", ))
+
+
+
+## kn08
+kn08_xl <- u01.importxlsx("~/Dropbox (Palmer Lab)/Palmer Lab/Khai-Minh Nguyen/Sequencing Submission Files/Flowcell Sample-Barcode List/2021-06-28-Flowcell Sample-Barcode list (KN08 Pool) ID.xlsx")[[1]] %>% 
+  mutate(sample_id = ifelse(sample_id == "933000320187075_1"&barcode == "ATCCGGTA", "933000320187075", sample_id),
+         sample_id = ifelse(sample_id == "933000320187075_2"&barcode == "GAGACAGT", "933000320187075", sample_id)) %>% # added after we change the original file to the one w rfid fixes 
+  clean_names() %>% 
+  mutate(rfid = sample_id) %>%
+  mutate(rfid = ifelse(grepl("^(3b|1D|BB|EE)", rfid, ignore.case = T), toupper(rfid), rfid)) %>% ## make sure all ID's other than the su guo breeders and larvae are capitalized and uniform
+  rowwise() %>% 
+  mutate(rfid = replace(rfid, grepl("^\\d{9}$", sample_id), paste0("933000", sample_id)),
+         rfid = gsub(" ", "", rfid),
+         rfid = gsub("-", "_", rfid),
+         rfid = replace(rfid, grepl("Plate", rfid), gsub("(\\D)(\\d+)$", "\\2\\1", rfid)),
+         rfid = replace(rfid, grepl("^BB", rfid), gsub("^BB", "", rfid))) %>% # keep the prefixes in some places
+  # ,
+  # rfid = replace(rfid, grepl("^(\\D+)1", rfid), gsub("^(\\D+)", "", rfid))) %>% 
+  ungroup()
+
+kn08_df <- kn08_xl %>% 
+  mutate(rfid = ifelse(rfid == "0320188152", "933000320188152", rfid)) %>% 
+  mutate(rfid = ifelse(rfid == "7928310", "0007928310", rfid)) %>% 
+  left_join(sample_metadata_strain, by = "rfid") %>% 
+  left_join(sample_metadata_project, by = "rfid")
+
+## temp 
+kn08_df <- kn08_df %>% 
+  left_join(read.csv("~/Desktop/Database/csv files/r01_leah_solberg_woods_neuronal/mastertable_c01_leahsolbergwoodsneuronal.csv", stringsAsFactors = F) %>% 
+              mutate(project_name = "leah_neuronal") %>% 
+              select(rfid, project_name) %>% 
+              rbind(read.csv("~/Desktop/Database/csv files/r01_leah_solberg_woods_neuronal/mastertable_c02_leahsolbergwoodsneuronal.csv", stringsAsFactors = F) %>% 
+                      mutate(project_name = "leah_neuronal") %>% 
+                      select(rfid, project_name)) %>% 
+              rbind(uthsc_master_telese %>%
+                      mutate(project_name = "telese_twas") %>% 
+                      select(rfid, project_name)), by = 'rfid') %>% 
+  mutate(project_name = coalesce(project_name.x, project_name.y)) 
+
+
+
+# check for dupes and na project names 
+kn08_df %>% get_dupes(rfid) %>% distinct(project_name)
+kn08_df %>% get_dupes(rfid)
+kn08_df %>% naniar::vis_miss()
+kn08_df %>% subset(is.na(project_name))
+
+# create corrected sample barcode library for Khai
+kn08_df %>% 
+  mutate(sample_id = rfid) %>% 
+  subset(select = -(rfid:project_name)) %>%
+  mutate(sample_id = ifelse(sample_id == "933000320187075"&barcode == "ATCCGGTA", "933000320187075_1", sample_id),
+         sample_id = ifelse(sample_id == "933000320187075"&barcode == "GAGACAGT", "933000320187075_2", sample_id)) %>% 
+  openxlsx::write.xlsx(file = "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/2021-06-28-Flowcell Sample-Barcode list (KN08 Pool) ID.xlsx")
+
+  
+# create for db ## XX uncomment when sequenced is returned 
+kn08_db <- kn08_df %>%
+  rename("library_name" = "library") %>%
+  left_join(read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn08_filenames_processed.csv", stringsAsFactors = F), by = c("library_name", "pcr_barcode")) %>%
+  mutate(filename = "2021-06-28-Flowcell Sample-Barcode list (KN08 Pool).xlsx",
+         flag = NA) %>%
+  select(rfid, project_name, runid, barcode, library_name, pcr_barcode, filename, comments, flag, fastq_files) %>%
+  distinct
+
+# create the sample metadata file
+kn08_db_metadata <- kn08_db %>%
+  mutate(rfid = ifelse(rfid == "933000320187075"&barcode == "ATCCGGTA", "933000320187075_1", rfid),
+         rfid = ifelse(rfid == "933000320187075"&barcode == "GAGACAGT", "933000320187075_2", rfid)) %>% 
+  mutate(rfid = ifelse(grepl("^003B", rfid)&project_name == "p50_hao_chen_2020", gsub("^00", "", rfid), rfid)) %>%
+  left_join(union_metadata, by = "rfid") %>%
+  left_join(sample_metadata_strain, by = "rfid") %>%
+  rename('father' = 'sires',
+         'mother' = 'dames') %>%
+  select(-project_name) %>% # use this as a check to see if any are missing
+  rename("project_name" = "schema") %>%
+  select(everything(), father, mother, sex, coatcolor, organism, strain) %>%
+  naniar::replace_with_na_all(condition = ~.x %in% c("", "NA", "-"))
+
+# check if any are missing
+kn08_db_metadata %>% subset(is.na(project_name)) %>% select(project_name) %>% table()
+kn08_db_metadata %>% naniar::vis_miss()
+kn08_db_metadata %>% get_dupes(rfid)
+
+
+
+
+
+
+
 
 
 
@@ -334,8 +482,60 @@ kn07_db %>% subset(project_name == "r01_su_guo_breeders") %>% left_join(read.csv
 con <- dbConnect(dbDriver("PostgreSQL"), dbname="PalmerLab_Datasets",user="postgres",password="postgres")
 dbListTables(con) 
 
+install.packages("RPostgres")
+con <- dbConnect(RPostgres::Postgres(), dbname = "2021-07-12-upl", host = "test-2021-07-07.cajgfpbzaxfq.us-west-1.rds.amazonaws.com", port = 5432, user = "postgres", password = "palmerlab-amapostgres")
+table_ID <- Id(schema = "sample_tracking", table = "sample_barcode_lib")
+dbWriteTable(conn = con, name = table_ID, value = kn07_db, append = T)
+dbListTables(con) 
+
+
+
+sample_barcode_lib <- dbGetQuery(con,"select * from \"sample_tracking\".\"sample_barcode_lib\"")
+
+# sample_metadata_1 <- dbGetQuery(con,"select * from \"sample_tracking\".\"sample_metadata\"") # while connected to first db 
+# sample_metadata_2 <- dbGetQuery(con,"select * from \"sample_tracking\".\"sample_metadata\"") # while connected to aws db
+# sample_metadata_add <- anti_join(sample_metadata_1, sample_metadata_2)
+# con <- dbConnect(RPostgres::Postgres(), dbname = "2021-07-12-upl", host = "test-2021-07-07.cajgfpbzaxfq.us-west-1.rds.amazonaws.com", port = 5432, user = "postgres", password = "palmerlab-amapostgres")
+# table_ID <- Id(schema = "sample_tracking", table = "sample_metadata")
+# dbWriteTable(conn = con, name = table_ID, value = sample_metadata_add, append = T)
+
 extractionlog <- dbGetQuery(con,"select * from \"sample_tracking\".\"extraction_log\"")
 head(extractionlog)
+
+union_metadata <- dbGetQuery(con, "
+select 'u01_tom_jhou' as schema, rfid, sires, dames, sex, coatcolor from \"u01_tom_jhou\".\"wfu_master\"
+union all
+select 'u01_suzanne_mitchell' as schema, rfid, sires, dames, sex, coatcolor from \"u01_suzanne_mitchell\".\"wfu_master\"
+union all
+select 'u01_olivier_george_cocaine' as schema, rfid, sires, dames, sex, coatcolor from \"u01_olivier_george_cocaine\".\"wfu_master\"
+union all
+select 'u01_olivier_george_oxycodone' as schema, rfid, sires, dames, sex, coatcolor from \"u01_olivier_george_oxycodone\".\"wfu_master\"
+union all
+select 'u01_peter_kalivas_us' as schema, rfid, sires, dames, sex, coatcolor from \"u01_peter_kalivas_us\".\"wfu_master\"
+union all
+select 'u01_peter_kalivas_italy' as schema, rfid, sires, dames, sex, coatcolor from \"u01_peter_kalivas_italy\".\"wfu_master\"
+union all 
+select 'p50_david_dietz_2020' as schema, rfid, sires, dames, sex, coatcolor from \"p50_david_dietz_2020\".\"wfu_master\"
+union all 
+select 'p50_hao_chen_2020' as schema, rfid, sires, dames, sex, coatcolor from \"p50_hao_chen_2020\".\"wfu_master\"
+union all 
+select 'r01_su_guo_breeders' as schema, rfid, 'NA' as sires, 'NA' as dames, sex, 'NA' as coatcolor from \"r01_su_guo_breeders\".\"ucsf_master\"
+union all 
+select 'r01_su_guo_larvae' as schema, rfid, father as sires,  mother as dames, 'NA' as sex, 'NA' as coatcolor from \"r01_su_guo_larvae\".\"larvae_phenotypes\"
+union all 
+select 'pcal_brian_trainor' as schema, rfid, sires, dames, sex, 'NA' as coatcolor from \"pcal_brian_trainor\".\"ucd_master\"
+union all
+select 'u01_huda_akil_sd' as schema, rfid, 'NA' as sires, 'NA' as dames, sex, 'NA' as coatcolor from \"sample_tracking\".\"sample_metadata\" where project_name = 'u01_huda_akil_sd'
+union all
+select 'r01_leah_solberg_woods_neurogenes' as schema, rfid, sires, dames, sex, coatcolor from \"r01_leah_solberg_woods_neurogenes\".\"wfu_master\"
+")
+
+sample_metadata_strain <- dbGetQuery(con, "
+select rfid, organism, strain from \"sample_tracking\".\"sample_metadata\"")
+
+sample_metadata_project <- dbGetQuery(con, "
+select rfid, project_name from \"sample_tracking\".\"sample_metadata\"")
+
 
 
 dbWriteTable(con, c("sample_tracking","sample_barcode_library"), value = flowcell_df_fordb, row.names = FALSE)

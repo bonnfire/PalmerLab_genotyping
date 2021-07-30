@@ -2,7 +2,7 @@
 
 ## join all pedigrees and update hs pedigree in db 
 
-old_pedigree <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/pedigree.csv") %>% 
+old_pedigree <- read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/pedigree.csv") %>% 
   mutate_all(as.character)
 old_pedigree %>% get_dupes(id)
 
@@ -334,8 +334,8 @@ pedigree_01062021_siredame %>%
 ## pedigree as of 12/16/2020
 
 # apurva's copy 
-load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/Riptide_control_pedigree.RData")
-ped_map 
+load("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/Riptide_control_pedigree.RData") # controls # ped_map
+ 
 
 
 # renamed original file   

@@ -1,6 +1,37 @@
 ## data queries
+# clean kn08 fastq files
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn08_filenames.csv", stringsAsFactors = F) %>% 
+  separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+         file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+  distinct(runid, file) %>% 
+  mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% 
+  mutate(file = gsub("^(7[1-9]|80)", "R\\1", file)) %>% 
+  mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
+         pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+  select(-file) %>% 
+  subset(grepl("Riptide(7[1-9]|80)", library_name)) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn08_filenames_processed.csv", row.names = F)
 
-## create sample metadata for kn07
+
+
+# clean kn06 fastq files
+read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn06_filenames.csv", stringsAsFactors = F) %>% 
+  separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
+  mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
+         file = gsub("_(R\\d)_", "__", fastq_filename)) %>% 
+  distinct(runid, file) %>% 
+  mutate(fastq_files = paste0(gsub("__", "_R1_", file), "; ", gsub("__", "_R2_", file))) %>% 
+  mutate(file = gsub("^(5[1-9]|60)", "R\\1", file)) %>% 
+  mutate(library_name = paste0("Riptide", parse_number(gsub("(R\\d+)_.*", "\\1", file))),
+         pcr_barcode = parse_number(gsub(".*_(S\\d+)_.*", "\\1", file)) %>% as.character) %>% 
+  select(-file) %>% 
+  subset(grepl("Riptide(5[1-9]|60)", library_name)) %>% 
+  write.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_kn06_filenames_processed.csv", row.names = F)
+
+
+
+## clean kn07 fastq files
 read.csv("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/fastq_seq07_filenames.csv", stringsAsFactors = F) %>% 
   separate(fastq_filename, into = c("runid", "fastq_filename"), sep = "/") %>%
   mutate(Rnum = gsub(".*_(R\\d)_.*", "\\1", fastq_filename), 
