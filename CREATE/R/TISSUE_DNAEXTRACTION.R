@@ -3,7 +3,10 @@
 
 setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_ShippingMaster/Tissues/Original")
 
+read.csv('~/Downloads/intoDB.csv') %>% mutate(rfid = as.character(rfid), project_name = as.character(project_name)) %>% anti_join(extractionlog %>% select(rfid, project_name, riptide_plate_number), by = c("rfid", "project_name")) %>% select(project_name) %>% table()
+read.csv('~/Downloads/intoDB.csv') %>% mutate(rfid = as.character(rfid), project_name = as.character(project_name), riptide_plate_number = as.character(riptide_plate_number)) %>% anti_join(extractionlog %>% select(rfid, project_name, riptide_plate_number), by = c("rfid", "project_name")) %>% select(riptide_plate_number) %>% table()
 
+read.csv('~/Downloads/notintoDB.csv') %>% dim
 
 # An important subset of this table comes from the shipments that we receive from the labs
 # The shipment sheets for the tissue samples are in folder 20190829_wfu_u01_shippingmaster/TissueShipments and they are saved in the WFU_MasterTables github
@@ -14,7 +17,7 @@ setwd("~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/U01/20190829_WFU_U01_Shippin
 
 # https://docs.google.com/spreadsheets/d/1ye6Vx7vuf7T2grUlGtH0lbKSCU-aLhIy_CVZHfN48yw/edit#gid=1476254388
 # modifying code to extract from multiple google sheets
-#install.packages("googlesheets4")
+  #install.packages("googlesheets4")
 khai_tissueextractionNames <- googlesheets4::sheet_names(
   googlesheets4::gs4_find()$id[grep("Spleen&Fish", googlesheets4::gs4_find()$name, ignore.case = T)]
   ) #extract the id code associated with the U01 Spleen&Fish Extraction Database 

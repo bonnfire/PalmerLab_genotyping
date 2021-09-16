@@ -11,11 +11,13 @@ write.csv(khai_tissueextraction_53_101_df_db_upload, file = "~/Desktop/Database/
 write.csv(kn05_db, file = "~/Desktop/Database/csv files/sample_tracking/kn05_sample_barcode_lib.csv", row.names = F)
 write.csv(kn06_db, file = "~/Desktop/Database/csv files/sample_tracking/kn06_sample_barcode_lib.csv", row.names = F)
 write.csv(kn07_db, file = "~/Desktop/Database/csv files/sample_tracking/kn07_sample_barcode_lib.csv", row.names = F)
+write.csv(kn08_db, file = "~/Desktop/Database/csv files/sample_tracking/kn08_sample_barcode_lib.csv", row.names = F)
 
 
 # sample metadata joins to sample barcode library for genotyping team
 write.csv(kn07_db_metadata, file = "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/kn07_fastq_sample_metadata_n931.csv", row.names = F)
 write.csv(kn06_db_metadata, file = "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/kn06_fastq_sample_metadata_n953.csv", row.names = F)
+write.csv(kn08_db_metadata, file = "~/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/sample_tracking/generated/kn08_fastq_sample_metadata_n951.csv", row.names = F)
 
 
 ## pedigree 

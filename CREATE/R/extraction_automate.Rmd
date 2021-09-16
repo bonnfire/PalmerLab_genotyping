@@ -1,0 +1,208 @@
+---
+title: "googlesheets"
+author: "Alan Lin"
+date: "8/17/2021"
+output: html_document
+---
+  
+  
+  
+```{r}
+library(RPostgres)
+library(rjson)
+
+ama_creds <- fromJSON(file = "/home/bonnie/remoteDir/srv/shiny-server/palmer-progress/.database-access.json") 
+
+
+#uses the list generated from JSON file to enter in credentials
+con <- dbConnect(RPostgres::Postgres(), dbname = ama_creds$database,
+                 host= ama_creds$host , port = 5432, user = ama_creds$user , password = ama_creds$password) 
+
+
+#name the application being connected to database
+dbSendQuery(con, "set application_name = 'RStudio'")
+
+
+sample_metadata_project <- dbGetQuery(con, "select * from sample_tracking.sample_metadata")
+```
+
+```{r}
+## set up chron job 
+# 
+# devtools::install_github("bnosac/cronR")
+# 
+# library(cronR)
+# cron_rm("extraction")
+# cmd <- cron_rscript("/home/bonnie/Dropbox (Palmer Lab)/Palmer Lab/Bonnie Lin/github/PalmerLab_genotyping/CREATE/R/extraction_chron.R")
+# cron_add(command = cmd, frequency = 'hourly', at = '00:29', id = 'extraction', description = "testing linux scheduler")
+# 
+### 
+
+library(googledrive)
+library(googlesheets4)
+library(janitor)
+library(tidyverse)
+library(data.table)
+
+
+#find sheet
+
+#gs4_auth("palmerlabmeister@gmail.com")
+gs4_auth("akl6@williams.edu",token = NULL)
+
+theSheets <- gs4_find()
+
+#find sheetnames of the first one(dummy sheet)
+sheetNames <- sheet_names(theSheets$id[grep("Spleen&Fish", theSheets$name, ignore.case = T)])
+
+#for now, go by 20
+num <- seq(0,100,20)
+
+for (i in num){
+  
+  
+  #read the sheets 
+  first <- i + 1
+  second <- i + 20
+  
+  
+  theWorksheets <- lapply(sheetNames[first:second], function(x){
+    x <- range_read(theSheets$id[grep("Spleen&Fish", theSheets$name, ignore.case = T)], sheet = x)  %>% 
+      clean_names() %>% 
+      subset(!is.na(dna_plate_code))
+    
+  })
+  
+  
+  
+  #  names(theWorksheets) <- sheetNames[first:second]
+  
+  
+  #look through and see if one column has na,
+  
+  remove <- c()
+  
+  for (i in 1:20) {
+    if (any(is.na(theWorksheets[[i]]$riptide_plate_number))) {
+      
+      remove <- append(remove, i)
+    } 
+  }
+  
+  
+  #now, remove any sheets that had na in one column from the main list of sheets
+  if (length(remove) != 0){
+    theWorksheets <- theWorksheets[-remove]
+  } 
+  
+  
+  
+  # clean for df 
+  extraction_df <- theWorksheets %>% 
+    lapply(., function(x){
+      x %>%
+        mutate_all(as.character)
+    }) %>% 
+    rbindlist(fill = T) %>% 
+    clean_names %>% 
+    naniar::replace_with_na_all(condition = ~.x %in% c("NA", "N/A", "None")) %>% 
+    dplyr::filter(!is.na(dna_plate_code) & !is.na(transponder) | !is.na(sample_id_barcode)) %>% # if you exclude, you are removing pcal and zebrafish
+    mutate(rfid = ifelse(
+      grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 9 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+      paste0("933000", sample_id_barcode),
+      ifelse(
+        grepl("^\\d+", sample_id_barcode) & nchar(sample_id_barcode) == 10 & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+        paste0("93300", sample_id_barcode),
+        ifelse(!grepl("^\\d+", sample_id_barcode) & grepl("Plate|p\\.cal", sample_id_barcode) & !grepl("riptidecontrol", dna_plate_code, ignore.case = T),
+               sample_id_barcode, sample_id_barcode)
+      ) 
+    )) %>% # create the rfid column from the sample_id_barcode to make them uniform and comparable to transponder id (rfid) in wfu
+    mutate(rfid = replace(rfid, sample_id_barcode == "F507", "933000320047344")) %>% 
+    rowwise() %>% 
+    mutate(rfid = replace(rfid, grepl("mismatch", comments, ignore.case = T), transponder),
+           rfid = replace(rfid, well == "C5"&dna_plate_code=="Kalina02/Jhou03", "933000320046294"), #fix the dupe rfid
+           rfid = gsub(" ", "", rfid),
+           rfid = gsub("20200617Plate", "20200616Plate", rfid)
+    ) %>% ###
+    mutate(rfid = replace(rfid, grepl("Plate", rfid), paste0(gsub("(\\D)(\\d+)$", "\\2\\1", rfid)))) %>% 
+    mutate(riptide_plate_number = gsub("[- _]", "", riptide_plate_number)) %>%
+    ungroup() %>% 
+    distinct()
+  
+  
+  
+  
+  extraction_df1 <- extraction_df %>% mutate(rfid = gsub("-", "_", rfid)) %>%
+    left_join(sample_metadata_project %>% distinct(rfid, project_name), by = "rfid") %>% 
+    select(-matches("x(1[89])|x2[0-2]$|^e$"))
+  
+  
+  
+  
+  
+  
+  #grab rows that have a project name and rfid exists in sample_metadata
+  extraction_df_in <- subset(extraction_df1, extraction_df1$rfid %in% sample_metadata_project$rfid & !is.na(extraction_df1$project_name))
+  
+  
+  #grab rows that don't have a project_name and rfid doesn't exist in sample_metadata
+  extraction_df_Notin <- subset(extraction_df1, !(extraction_df1$rfid %in% sample_metadata_project$rfid) & is.na(extraction_df1$project_name))
+  
+  
+  if (exists("extraction_in_view") == FALSE & exists("extraction_not_view") == FALSE) {
+    
+    #for the first time through, collect the rows from before
+    extraction_in_view <- extraction_df_in
+    
+    extraction_not_view <- extraction_df_Notin
+    
+  } else {
+    
+    
+    # need this so rbind can take in new columns that weren't there before. 
+    extraction_df_in[setdiff(names(extraction_in_view), names(extraction_df_in))] <- NA
+    extraction_in_view[setdiff(names(extraction_df_in), names(extraction_in_view))] <- NA
+    
+    
+    extraction_df_Notin[setdiff(names(extraction_not_view), names(extraction_df_Notin))] <- NA
+    extraction_not_view[setdiff(names(extraction_df_Notin), names(extraction_not_view))] <- NA
+    
+    #next time through, add rows to the previous time and find distinct rows
+    extraction_in_view <- rbind(extraction_in_view, extraction_df_in) %>% distinct()
+    
+    extraction_not_view <- rbind(extraction_not_view, extraction_df_Notin) %>% distinct()
+    
+    
+    
+    
+  }
+  
+  
+  
+}
+
+```
+
+```{r}
+
+#to write into database
+table_ID_extraction <- Id(schema = "sample_tracking", table = "extraction_log")
+
+#overwrite is on so if any changes occur in the database or google sheets, just rerun this code to replace
+dbWriteTable(conn = con, name = table_ID_extraction, value = extraction_df_in, append = T)
+
+
+
+#tables to write into csv file
+write.csv(extraction_in_view, "C:/Users/super/Downloads/intoDB.csv")
+extraction_in_view
+
+write.csv(extraction_not_view, "C:/Users/super/Downloads/notintoDB.csv")
+extraction_not_view
+```
+
+
+
+
+
+

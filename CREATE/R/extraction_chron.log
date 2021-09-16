@@ -1,0 +1,143 @@
+
+Attaching package: ‘googlesheets4’
+
+The following objects are masked from ‘package:googledrive’:
+
+    request_generate, request_make
+
+Suitable tokens found in the cache, associated with these emails:
+  * b2lin@ucsd.edu
+  * palmerlabmeister@gmail.com
+The first will be used.
+Using an auto-discovered, cached token.
+To suppress this message, modify your code or options to clearly consent to the use of a cached token.
+See gargle's "Non-interactive auth" vignette for more details:
+https://gargle.r-lib.org/articles/non-interactive-auth.html
+The googledrive package is using a cached token for b2lin@ucsd.edu.
+Auto-refreshing stale OAuth token.
+Error: Client error: (401) Unauthorized
+  *       domain: global
+  *       reason: authError
+  *      message: Invalid Credentials
+  * locationType: header
+  *     location: Authorization
+Backtrace:
+    █
+ 1. └─googlesheets4::gs4_find()
+ 2.   └─googledrive::drive_find(..., type = "spreadsheet")
+ 3.     └─googledrive::do_paginated_request(...)
+ 4.       └─gargle::response_process(page)
+ 5.         └─gargle:::stop_request_failed(error_message(resp), resp)
+Warning message:
+Unable to refresh token: invalid_grant
+Bad Request 
+Execution halted
+
+Attaching package: ‘googlesheets4’
+
+The following objects are masked from ‘package:googledrive’:
+
+    request_generate, request_make
+
+Using an auto-discovered, cached token.
+To suppress this message, modify your code or options to clearly consent to the use of a cached token.
+See gargle's "Non-interactive auth" vignette for more details:
+https://gargle.r-lib.org/articles/non-interactive-auth.html
+The googledrive package is using a cached token for palmerlabmeister@gmail.com.
+Auto-refreshing stale OAuth token.
+Auto-refreshing stale OAuth token.
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R1) Olivier01'"
+Error in clean_names(.) : could not find function "clean_names"
+Calls: lapply ... withVisible -> eval -> eval -> _fseq -> freduce -> <Anonymous>
+In addition: Warning message:
+`sheets_read()` is deprecated as of googlesheets4 0.2.0.
+Please use `range_read()` instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_warnings()` to see where this warning was generated. 
+Execution halted
+
+Attaching package: ‘googlesheets4’
+
+The following objects are masked from ‘package:googledrive’:
+
+    request_generate, request_make
+
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+
+── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──
+✔ ggplot2 3.2.1     ✔ purrr   0.3.3
+✔ tibble  3.0.6     ✔ dplyr   0.8.3
+✔ tidyr   1.1.3     ✔ stringr 1.4.0
+✔ readr   1.3.1     ✔ forcats 0.4.0
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Using an auto-discovered, cached token.
+To suppress this message, modify your code or options to clearly consent to the use of a cached token.
+See gargle's "Non-interactive auth" vignette for more details:
+https://gargle.r-lib.org/articles/non-interactive-auth.html
+The googledrive package is using a cached token for palmerlabmeister@gmail.com.
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R1) Olivier01'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R2) Olivier02'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R3) Olivier03'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R4) Olivier04'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R5) Olivier05'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R6) Jhou01'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R7) 20191217 Plate1'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R8) Olivier06-Mitchel01'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R9) p.cal01'"
+New names:
+* `` -> ...18
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R10) 20200204 Plate1'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R11) Mitchel02'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R12) Mitchel03'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R13) Jhou02'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R14) Kalina01'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R15) NYRich01Mitchel04'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R16) Kalina02_Jhou03'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R17) 20191209 Plate1'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'UCSF FishBreeders01 (FC20200305)'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R18) 20191209 Plate2'"
+Reading from "U01 Spleen&Fish Extraction Database"
+Range "'(R19) Jhou04'"
+Warning message:
+`sheets_read()` is deprecated as of googlesheets4 0.2.0.
+Please use `range_read()` instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_warnings()` to see where this warning was generated. 
